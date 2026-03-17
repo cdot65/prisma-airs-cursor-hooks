@@ -1,6 +1,6 @@
 {
   "name": "@cdot65/prisma-airs-cursor-hooks",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Cursor IDE hooks integrating Prisma AIRS scanning into the developer workflow",
   "type": "module",
   "keywords": [
