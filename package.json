@@ -41,7 +41,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "build": "tsc -p tsconfig.build.json",
-    "prepare": "npm run build",
+    "prepack": "npm run build",
     "typecheck": "tsc --noEmit",
     "validate-connection": "tsx scripts/validate-connection.ts",
     "validate-detection": "tsx scripts/validate-detection.ts",

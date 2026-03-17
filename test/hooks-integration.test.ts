@@ -1,9 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { execSync } from "node:child_process";
 import { writeFileSync, mkdirSync, rmSync } from "node:fs";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import type { CursorHookOutput, BeforeSubmitPromptOutput, BeforeSubmitPromptInput, AfterAgentResponseInput } from "../src/types.js";
 
+const PROJECT_ROOT = resolve(import.meta.dirname, "..");
 const TMP_DIR = join(import.meta.dirname, ".tmp-hooks-test");
 const CONFIG_DIR = join(TMP_DIR, ".cursor", "hooks");
 const CONFIG_PATH = join(CONFIG_DIR, "airs-config.json");
@@ -33,6 +34,7 @@ function runHook(
     ...process.env,
     AIRS_API_KEY: "test-key-123",
     AIRS_API_ENDPOINT: "https://test.api.prismacloud.io",
+    NODE_PATH: join(PROJECT_ROOT, "node_modules"),
     ...env,
   };
 
