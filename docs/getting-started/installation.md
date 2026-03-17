@@ -7,7 +7,15 @@
 - **Prisma AIRS API key** (`x-pan-token`)
 - **AIRS security profiles** configured for prompt and response scanning
 
-## Clone and Build
+## Option A: Install from npm (recommended)
+
+```bash
+npm install -g prisma-airs-cursor-hooks
+```
+
+This installs the CLI globally and makes the `prisma-airs-hooks` command available system-wide.
+
+## Option B: Install from source
 
 ```bash
 git clone https://github.com/cdot65/prisma-airs-cursor-hooks.git
@@ -42,13 +50,25 @@ export AIRS_RESPONSE_PROFILE=cursor-ide-response-profile        # optional
 
 ## Register Hooks in Cursor
 
-```bash
-# Project-level (current workspace only)
-npm run install-hooks
+=== "npm global install"
 
-# Global (all workspaces)
-npm run install-hooks -- --global
-```
+    ```bash
+    # Project-level (current workspace only)
+    prisma-airs-hooks install
+
+    # Global (all workspaces)
+    prisma-airs-hooks install --global
+    ```
+
+=== "From source"
+
+    ```bash
+    # Project-level (current workspace only)
+    npm run install-hooks
+
+    # Global (all workspaces)
+    npm run install-hooks -- --global
+    ```
 
 This writes `hooks.json` pointing at the precompiled JS in `dist/` and copies `airs-config.json` to the hooks config directory.
 
