@@ -4,7 +4,7 @@ Cursor IDE hooks that scan prompts and AI responses in real-time using [Prisma A
 
 Built on the [`@cdot65/prisma-airs-sdk`](https://github.com/cdot65/prisma-airs-sdk).
 
-## Architecture
+## How It Works
 
 ```
 Developer prompt → beforeSubmitPrompt hook → AIRS Sync API → allow/block
@@ -12,8 +12,6 @@ Developer prompt → beforeSubmitPrompt hook → AIRS Sync API → allow/block
                         Cursor AI Agent (if allowed)
                                                   ↓
 AI response → afterAgentResponse hook → code extractor → AIRS Sync API → allow/block
-                                         ↓
-                        (response field + code_response field)
 ```
 
 Both hooks use Cursor's native hooks.json system. They receive structured JSON on stdin, scan via the AIRS API, and reply on stdout (`{ "continue": false }` to block prompts, `{ "permission": "deny" }` + exit code 2 to block responses).
@@ -25,29 +23,15 @@ Both hooks use Cursor's native hooks.json system. They receive structured JSON o
 - **Prisma AIRS API key** and regional endpoint URL
 - **AIRS security profiles** configured for prompt and response scanning
 
-## Setup
-
-### Option A: Install from npm (recommended)
+## Install
 
 ```bash
 npm install -g @cdot65/prisma-airs-cursor-hooks
 ```
 
-Then register hooks in Cursor:
+> **From source?** See the [Development](#development) section below.
 
-```bash
-prisma-airs-hooks install --global
-```
-
-### Option B: Install from source
-
-```bash
-git clone https://github.com/cdot65/prisma-airs-cursor-hooks.git
-cd prisma-airs-cursor-hooks
-npm install   # also runs `npm run build` via prepare hook
-```
-
-### 2. Set environment variables
+## Set Environment Variables
 
 Add to your shell profile (`~/.zshrc`, `~/.bashrc`, etc.):
 
@@ -68,51 +52,38 @@ Available regional endpoints:
 | India | `https://service-in.api.aisecurity.paloaltonetworks.com` |
 | Singapore | `https://service-sg.api.aisecurity.paloaltonetworks.com` |
 
-### 3. Validate connectivity
+## Validate Connectivity
 
 ```bash
-# Test that your API key and endpoint work
-npm run validate-connection
-
-# Confirm prompt injection detection is active
-npm run validate-detection
+prisma-airs-hooks validate-connection
+prisma-airs-hooks validate-detection
 ```
 
-### 4. Install hooks into Cursor
-
-If installed from npm:
+## Register Hooks in Cursor
 
 ```bash
 prisma-airs-hooks install --global
 ```
 
-If installed from source:
-
-```bash
-npm run install-hooks -- --global  # all workspaces (~/.cursor/hooks.json)
-```
-
-This writes `hooks.json` registering two hooks pointing at precompiled JS in `dist/`:
+This writes `hooks.json` registering two hooks pointing at precompiled JS:
 - **`beforeSubmitPrompt`** — scans every prompt before it reaches the AI agent
 - **`afterAgentResponse`** — scans every AI response (with code extraction) before display
 
 It also copies `airs-config.json` to the hooks config directory.
 
-> **Why compiled JS?** Hooks run as a fresh process on every prompt/response. Using precompiled JS (`node dist/...`) vs TypeScript (`npx tsx src/...`) eliminates ~1.5s of startup overhead per invocation (npx resolution + tsx transpilation). See [Development mode](#development-mode) for the tsx alternative.
-
-### 5. Restart Cursor
+## Restart Cursor
 
 Cursor reads `hooks.json` at startup. **Restart Cursor** to activate the hooks.
 
-### 6. Verify installation
+## Verify
 
 ```bash
-npm run verify-hooks
+prisma-airs-hooks verify
 ```
 
 ## Configuration
 
-Runtime config lives at `.cursor/hooks/airs-config.json`:
+Runtime config lives at `~/.cursor/hooks/airs-config.json`:
 
 ```json
 {
@@ -171,82 +142,55 @@ When `mode` is `enforce`, each detection service can be configured independently
 
 After `failure_threshold` consecutive AIRS API failures, scanning is temporarily bypassed for `cooldown_ms` milliseconds. A probe request is sent after cooldown — if it succeeds, scanning resumes normally.
 
-## Scanning details
-
-### Prompt scanning (beforeSubmitPrompt)
-
-- Prompt text sent to AIRS with `prompt` content key
-- Scanned against the prompt security profile (prompt injection, DLP, toxicity, custom topics)
-
-### Response scanning (afterAgentResponse)
-
-- AI response is parsed by the code extractor:
-  - Fenced code blocks (` ```lang `) are extracted with language detection
-  - Indented code blocks (4+ spaces) are detected
-  - Heuristic fallback for unfenced code-like content
-- Natural language goes in the `response` field
-- Extracted code goes in the `code_response` field (triggers WildFire/ATP malicious code detection)
-- Scanned against the response security profile (malicious code, DLP, URL categorization, toxicity)
-
-### Fail-open design
-
-Scanning **never blocks the developer workflow** on infrastructure failures:
-- `failClosed: false` in hooks.json — Cursor allows through if the hook process crashes
-- Network errors and timeouts return `{ "permission": "allow" }`
-- Config errors return allow with a warning message
-- Circuit breaker bypasses scanning after consecutive failures
-
-## Commands
+## CLI Commands
 
 | Command | Description |
 |---------|-------------|
-| `npm run build` | Compile hooks to `dist/` (also runs on `npm install`) |
-| `npm test` | Run all tests (66 tests across 9 suites) |
-| `npm run typecheck` | TypeScript type checking |
-| `npm run validate-connection` | Test AIRS API connectivity |
-| `npm run validate-detection` | Verify prompt injection detection |
-| `npm run install-hooks` | Write AIRS entries to `.cursor/hooks.json` |
-| `npm run uninstall-hooks` | Remove AIRS entries from `.cursor/hooks.json` |
-| `npm run verify-hooks` | Check hooks are installed and env vars set |
-| `npm run stats` | Show scan statistics from log file |
-| `npm run stats -- --since 7d --json` | Stats for last 7 days as JSON |
+| `prisma-airs-hooks install [--global]` | Register hooks in Cursor |
+| `prisma-airs-hooks uninstall [--global]` | Remove AIRS hooks from Cursor |
+| `prisma-airs-hooks verify` | Check hooks registration and env vars |
+| `prisma-airs-hooks validate-connection` | Test AIRS API connectivity |
+| `prisma-airs-hooks validate-detection` | Verify prompt injection detection |
+| `prisma-airs-hooks stats [--since 7d] [--json]` | Show scan statistics |
 
 ## Uninstall
 
 ```bash
-# npm global install
 prisma-airs-hooks uninstall --global
-
-# from source
-npm run uninstall-hooks -- --global
 ```
 
-Removes AIRS entries from `.cursor/hooks.json` while preserving other hooks, config, and logs. Restart Cursor after uninstalling.
+Removes AIRS entries from `hooks.json` while preserving other hooks, config, and logs. Restart Cursor after uninstalling.
 
 ## Development
 
+For contributors or those who want to run from source:
+
 ```bash
-# Install dependencies + build
+git clone https://github.com/cdot65/prisma-airs-cursor-hooks.git
+cd prisma-airs-cursor-hooks
 npm install
-
-# Run tests in watch mode
-npm run test:watch
-
-# Type check
-npm run typecheck
-
-# Rebuild after source changes
 npm run build
-
-# Build docs
-npm run docs:build
 ```
+
+### Development commands
+
+| Command | Description |
+|---------|-------------|
+| `npm run build` | Compile hooks to `dist/` |
+| `npm test` | Run all tests (66 tests across 9 suites) |
+| `npm run typecheck` | TypeScript type checking |
+| `npm run test:watch` | Run tests in watch mode |
+| `npm run validate-connection` | Test AIRS API connectivity |
+| `npm run validate-detection` | Verify prompt injection detection |
+| `npm run install-hooks` | Write AIRS entries to `.cursor/hooks.json` |
+| `npm run install-hooks -- --global` | Write AIRS entries to `~/.cursor/hooks.json` |
+| `npm run uninstall-hooks -- --global` | Remove AIRS entries from global hooks.json |
+| `npm run verify-hooks` | Check hooks are installed and env vars set |
+| `npm run stats` | Show scan statistics from log file |
 
 ### Development mode
 
-During development you can run hooks directly from TypeScript source without a build step. This is useful when iterating on hook logic — changes take effect immediately without rebuilding.
-
-Manually edit `~/.cursor/hooks.json` (or `.cursor/hooks.json`) to use tsx:
+During development you can run hooks directly from TypeScript source without a build step:
 
 ```json
 {
@@ -254,12 +198,7 @@ Manually edit `~/.cursor/hooks.json` (or `.cursor/hooks.json`) to use tsx:
 }
 ```
 
-This adds ~1.5s per hook invocation compared to compiled JS, so switch back to `node dist/...` for production use:
-
-```bash
-npm run build
-npm run install-hooks -- --global
-```
+This adds ~1.5s per hook invocation compared to compiled JS, so switch back to `node dist/...` for production use.
 
 ### Project structure
 
@@ -268,6 +207,7 @@ src/                           TypeScript source
   hooks/
     before-submit-prompt.ts    Cursor beforeSubmitPrompt entry point
     after-agent-response.ts    Cursor afterAgentResponse entry point
+  cli.ts                       CLI entry point (prisma-airs-hooks command)
   config.ts                    Config loader (project → global fallback)
   airs-client.ts               SDK wrapper with circuit breaker
   scanner.ts                   Scan orchestration + DLP masking + UX messages
