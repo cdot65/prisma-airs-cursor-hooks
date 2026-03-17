@@ -1,0 +1,34 @@
+{
+  "name": "prisma-airs-cursor-hooks",
+  "version": "0.1.0",
+  "description": "Cursor IDE hooks integrating Prisma AIRS scanning into the developer workflow",
+  "type": "module",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "validate-connection": "tsx scripts/validate-connection.ts",
+    "validate-detection": "tsx scripts/validate-detection.ts",
+    "install-hooks": "tsx scripts/install-hooks.ts",
+    "uninstall-hooks": "tsx scripts/uninstall-hooks.ts",
+    "verify-hooks": "tsx scripts/verify-hooks.ts",
+    "stats": "tsx scripts/airs-stats.ts",
+    "docs:dev": "vitepress dev docs",
+    "docs:build": "vitepress build docs",
+    "docs:preview": "vitepress preview docs"
+  },
+  "devDependencies": {
+    "@types/node": "^25.5.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.5.0",
+    "vitepress": "^1.6.4",
+    "vitest": "^2.1.0"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "@cdot65/prisma-airs-sdk": "file:../prisma-airs-sdk"
+  }
+}
