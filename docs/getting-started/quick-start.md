@@ -4,11 +4,19 @@ Get Prisma AIRS scanning in Cursor in under 5 minutes.
 
 ## 1. Install
 
-```bash
-git clone https://github.com/cdot65/prisma-airs-cursor-hooks.git
-cd prisma-airs-cursor-hooks
-npm install
-```
+=== "npm (recommended)"
+
+    ```bash
+    npm install -g prisma-airs-cursor-hooks
+    ```
+
+=== "From source"
+
+    ```bash
+    git clone https://github.com/cdot65/prisma-airs-cursor-hooks.git
+    cd prisma-airs-cursor-hooks
+    npm install
+    ```
 
 ## 2. Set Your API Key
 
@@ -26,9 +34,17 @@ You should see a successful scan result confirming your API key and endpoint wor
 
 ## 4. Install Hooks Globally
 
-```bash
-npm run install-hooks -- --global
-```
+=== "npm global install"
+
+    ```bash
+    prisma-airs-hooks install --global
+    ```
+
+=== "From source"
+
+    ```bash
+    npm run install-hooks -- --global
+    ```
 
 ## 5. Restart Cursor
 

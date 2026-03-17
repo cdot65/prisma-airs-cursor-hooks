@@ -27,7 +27,19 @@ Both hooks use Cursor's native hooks.json system. They receive structured JSON o
 
 ## Setup
 
-### 1. Clone, install, and build
+### Option A: Install from npm (recommended)
+
+```bash
+npm install -g prisma-airs-cursor-hooks
+```
+
+Then register hooks in Cursor:
+
+```bash
+prisma-airs-hooks install --global
+```
+
+### Option B: Install from source
 
 ```bash
 git clone https://github.com/cdot65/prisma-airs-cursor-hooks.git
@@ -68,8 +80,15 @@ npm run validate-detection
 
 ### 4. Install hooks into Cursor
 
+If installed from npm:
+
 ```bash
-npm run install-hooks           # project-level
+prisma-airs-hooks install --global
+```
+
+If installed from source:
+
+```bash
 npm run install-hooks -- --global  # all workspaces (~/.cursor/hooks.json)
 ```
 
@@ -195,7 +214,11 @@ Scanning **never blocks the developer workflow** on infrastructure failures:
 ## Uninstall
 
 ```bash
-npm run uninstall-hooks
+# npm global install
+prisma-airs-hooks uninstall --global
+
+# from source
+npm run uninstall-hooks -- --global
 ```
 
 Removes AIRS entries from `.cursor/hooks.json` while preserving other hooks, config, and logs. Restart Cursor after uninstalling.
