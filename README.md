@@ -16,7 +16,7 @@ AI response → afterAgentResponse hook → code extractor → AIRS Sync API →
                         (response field + code_response field)
 ```
 
-Both hooks use Cursor's native hooks.json system. They receive structured JSON on stdin, scan via the AIRS API, and reply with `{ "permission": "allow" | "deny" }` on stdout.
+Both hooks use Cursor's native hooks.json system. They receive structured JSON on stdin, scan via the AIRS API, and reply on stdout (`{ "continue": false }` to block prompts, `{ "permission": "deny" }` + exit code 2 to block responses).
 
 ## Prerequisites
 
@@ -27,12 +27,12 @@ Both hooks use Cursor's native hooks.json system. They receive structured JSON o
 
 ## Setup
 
-### 1. Clone and install
+### 1. Clone, install, and build
 
 ```bash
 git clone https://github.com/cdot65/prisma-airs-cursor-hooks.git
 cd prisma-airs-cursor-hooks
-npm install
+npm install   # also runs `npm run build` via prepare hook
 ```
 
 ### 2. Set environment variables
@@ -69,14 +69,17 @@ npm run validate-detection
 ### 4. Install hooks into Cursor
 
 ```bash
-npm run install-hooks
+npm run install-hooks           # project-level
+npm run install-hooks -- --global  # all workspaces (~/.cursor/hooks.json)
 ```
 
-This writes `.cursor/hooks.json` registering two hooks:
+This writes `hooks.json` registering two hooks pointing at precompiled JS in `dist/`:
 - **`beforeSubmitPrompt`** — scans every prompt before it reaches the AI agent
 - **`afterAgentResponse`** — scans every AI response (with code extraction) before display
 
-It also copies `airs-config.json` to `.cursor/hooks/` for runtime configuration.
+It also copies `airs-config.json` to the hooks config directory.
+
+> **Why compiled JS?** Hooks run as a fresh process on every prompt/response. Using precompiled JS (`node dist/...`) vs TypeScript (`npx tsx src/...`) eliminates ~1.5s of startup overhead per invocation (npx resolution + tsx transpilation). See [Development mode](#development-mode) for the tsx alternative.
 
 ### 5. Restart Cursor
 
@@ -178,7 +181,8 @@ Scanning **never blocks the developer workflow** on infrastructure failures:
 
 | Command | Description |
 |---------|-------------|
-| `npm test` | Run all tests (61 tests across 9 suites) |
+| `npm run build` | Compile hooks to `dist/` (also runs on `npm install`) |
+| `npm test` | Run all tests (66 tests across 9 suites) |
 | `npm run typecheck` | TypeScript type checking |
 | `npm run validate-connection` | Test AIRS API connectivity |
 | `npm run validate-detection` | Verify prompt injection detection |
@@ -199,7 +203,7 @@ Removes AIRS entries from `.cursor/hooks.json` while preserving other hooks, con
 ## Development
 
 ```bash
-# Install dependencies
+# Install dependencies + build
 npm install
 
 # Run tests in watch mode
@@ -208,37 +212,59 @@ npm run test:watch
 # Type check
 npm run typecheck
 
+# Rebuild after source changes
+npm run build
+
 # Build docs
 npm run docs:build
+```
+
+### Development mode
+
+During development you can run hooks directly from TypeScript source without a build step. This is useful when iterating on hook logic — changes take effect immediately without rebuilding.
+
+Manually edit `~/.cursor/hooks.json` (or `.cursor/hooks.json`) to use tsx:
+
+```json
+{
+  "command": "npx tsx \"/path/to/prisma-airs-cursor-hooks/src/hooks/before-submit-prompt.ts\""
+}
+```
+
+This adds ~1.5s per hook invocation compared to compiled JS, so switch back to `node dist/...` for production use:
+
+```bash
+npm run build
+npm run install-hooks -- --global
 ```
 
 ### Project structure
 
 ```
-src/
-  config.ts              Config loader (searches CURSOR_PROJECT_DIR)
-  airs-client.ts         SDK wrapper with circuit breaker integration
-  scanner.ts             Scan orchestration + DLP masking + UX messages
-  code-extractor.ts      Separates code from natural language
-  logger.ts              Structured JSON Lines logging with rotation
-  circuit-breaker.ts     Failure tracking with cooldown bypass
-  dlp-masking.ts         Per-service enforcement actions
-  log-rotation.ts        Rotate logs at 10MB
+src/                           TypeScript source
   hooks/
-    before-submit-prompt.ts   Cursor beforeSubmitPrompt entry point
-    after-agent-response.ts   Cursor afterAgentResponse entry point
-  adapters/
-    types.ts             HookAdapter interface (multi-IDE)
-    cursor-adapter.ts    Cursor-specific implementation
+    before-submit-prompt.ts    Cursor beforeSubmitPrompt entry point
+    after-agent-response.ts    Cursor afterAgentResponse entry point
+  config.ts                    Config loader (project → global fallback)
+  airs-client.ts               SDK wrapper with circuit breaker
+  scanner.ts                   Scan orchestration + DLP masking + UX messages
+  code-extractor.ts            Separates code from natural language
+  logger.ts                    JSON Lines logging with rotation
+  circuit-breaker.ts           Failure tracking with cooldown bypass
+  dlp-masking.ts               Per-service enforcement actions
+  log-rotation.ts              Rotate logs at 10MB
+  types.ts                     TypeScript interfaces
+  adapters/                    Multi-IDE adapter layer
+dist/                          Compiled JS (production hooks point here)
 scripts/
-  install-hooks.ts       Write .cursor/hooks.json
-  uninstall-hooks.ts     Remove AIRS entries from hooks.json
-  verify-hooks.ts        Tamper detection
-  validate-connection.ts Test AIRS connectivity
-  validate-detection.ts  Verify detection works
-  airs-stats.ts          Scan statistics CLI
+  install-hooks.ts             Write .cursor/hooks.json (points at dist/)
+  uninstall-hooks.ts           Remove AIRS entries from hooks.json
+  verify-hooks.ts              Tamper detection
+  validate-connection.ts       Test AIRS connectivity
+  validate-detection.ts        Verify detection works
+  airs-stats.ts                Scan statistics CLI
 test/
-  9 test suites, 61 tests
+  9 test suites, 66 tests (incl. compiled JS integration tests)
 ```
 
 ## License

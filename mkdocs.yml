@@ -1,0 +1,95 @@
+site_name: Prisma AIRS Cursor Hooks
+site_url: https://cdot65.github.io/prisma-airs-cursor-hooks/
+site_description: Cursor IDE hooks integrating Prisma AIRS scanning into the developer workflow
+repo_name: cdot65/prisma-airs-cursor-hooks
+repo_url: https://github.com/cdot65/prisma-airs-cursor-hooks
+
+theme:
+  name: material
+  logo: images/logo.svg
+  favicon: images/favicon.ico
+  palette:
+    - scheme: default
+      primary: deep purple
+      accent: amber
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: deep purple
+      accent: amber
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - navigation.footer
+    - content.code.copy
+    - content.tabs.link
+    - search.suggest
+    - search.highlight
+  icon:
+    repo: fontawesome/brands/github
+
+extra_css:
+  - css/custom.css
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.mark
+  - pymdownx.critic
+  - pymdownx.keys
+  - attr_list
+  - md_in_html
+  - tables
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - toc:
+      permalink: true
+
+plugins:
+  - search
+
+nav:
+  - Home: index.md
+  - Getting Started:
+      - Installation: getting-started/installation.md
+      - Configuration: getting-started/configuration.md
+      - Quick Start: getting-started/quick-start.md
+  - Architecture:
+      - Overview: architecture/overview.md
+      - Scanning Flow: architecture/scanning-flow.md
+      - Design Decisions: architecture/design-decisions.md
+  - Features:
+      - Detection Services: features/detection-services.md
+      - Code Extraction: features/code-extraction.md
+      - Circuit Breaker: features/circuit-breaker.md
+      - DLP Masking: features/dlp-masking.md
+      - Logging & Stats: features/logging.md
+  - Reference:
+      - Configuration: reference/configuration.md
+      - Environment Variables: reference/environment-variables.md
+      - CLI Commands: reference/cli-commands.md
+      - Cursor Hooks API: reference/cursor-hooks-api.md
+  - Development:
+      - Contributing: development/contributing.md
+      - Testing: development/testing.md
+  - About:
+      - Release Notes: about/release-notes.md
+      - License: about/license.md

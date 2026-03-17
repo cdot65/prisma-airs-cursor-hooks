@@ -26,6 +26,7 @@ function runHook(
   scriptPath: string,
   stdinJson: object,
   env: Record<string, string> = {},
+  runner = "npx tsx",
 ): CursorHookOutput {
   const input = JSON.stringify(stdinJson);
   const fullEnv = {
@@ -37,7 +38,7 @@ function runHook(
 
   // The hook will fail to reach AIRS (no real API) and should fail-open
   const result = execSync(
-    `echo '${input.replace(/'/g, "'\\''")}' | npx tsx ${scriptPath}`,
+    `echo '${input.replace(/'/g, "'\\''")}' | ${runner} ${scriptPath}`,
     {
       encoding: "utf-8",
       cwd: TMP_DIR,
@@ -135,6 +136,31 @@ describe("hook entry points — Cursor JSON contract", () => {
       };
 
       const output = runHook(SCRIPT, input);
+      expect(output.permission).toBe("allow");
+    });
+  });
+
+  describe("compiled JS hooks (dist/)", () => {
+    const PROMPT_JS = join(import.meta.dirname, "..", "dist", "hooks", "before-submit-prompt.js");
+    const RESPONSE_JS = join(import.meta.dirname, "..", "dist", "hooks", "after-agent-response.js");
+
+    it("compiled beforeSubmitPrompt allows benign prompt", () => {
+      const input: BeforeSubmitPromptInput = {
+        hook_event_name: "beforeSubmitPrompt",
+        prompt: "What is 2+2?",
+      };
+
+      const output = runHook(PROMPT_JS, input, {}, "node") as unknown as BeforeSubmitPromptOutput;
+      expect(output.continue).toBe(true);
+    });
+
+    it("compiled afterAgentResponse allows benign response", () => {
+      const input: AfterAgentResponseInput = {
+        hook_event_name: "afterAgentResponse",
+        text: "The answer is 4.",
+      };
+
+      const output = runHook(RESPONSE_JS, input, {}, "node");
       expect(output.permission).toBe("allow");
     });
   });

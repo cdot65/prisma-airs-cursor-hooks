@@ -3,12 +3,45 @@
   "version": "0.1.0",
   "description": "Cursor IDE hooks integrating Prisma AIRS scanning into the developer workflow",
   "type": "module",
+  "keywords": [
+    "cursor",
+    "cursor-hooks",
+    "prisma",
+    "airs",
+    "ai-security",
+    "prompt-injection",
+    "dlp",
+    "malicious-code",
+    "palo-alto"
+  ],
+  "author": "cdot65",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/cdot65/prisma-airs-cursor-hooks.git"
+  },
+  "homepage": "https://cdot65.github.io/prisma-airs-cursor-hooks/",
+  "bugs": {
+    "url": "https://github.com/cdot65/prisma-airs-cursor-hooks/issues"
+  },
   "engines": {
     "node": ">=18.0.0"
   },
+  "bin": {
+    "prisma-airs-hooks": "dist/cli.js"
+  },
+  "files": [
+    "dist/",
+    "scripts/",
+    "airs-config.json",
+    "tsconfig.build.json",
+    "src/"
+  ],
   "scripts": {
     "test": "vitest run",
     "test:watch": "vitest",
+    "build": "tsc -p tsconfig.build.json",
+    "prepare": "npm run build",
     "typecheck": "tsc --noEmit",
     "validate-connection": "tsx scripts/validate-connection.ts",
     "validate-detection": "tsx scripts/validate-detection.ts",
@@ -16,19 +49,16 @@
     "uninstall-hooks": "tsx scripts/uninstall-hooks.ts",
     "verify-hooks": "tsx scripts/verify-hooks.ts",
     "stats": "tsx scripts/airs-stats.ts",
-    "docs:dev": "vitepress dev docs",
-    "docs:build": "vitepress build docs",
-    "docs:preview": "vitepress preview docs"
+    "docs:serve": "mkdocs serve",
+    "docs:build": "mkdocs build"
+  },
+  "dependencies": {
+    "@cdot65/prisma-airs-sdk": "^0.6.7",
+    "tsx": "^4.19.0"
   },
   "devDependencies": {
     "@types/node": "^25.5.0",
-    "tsx": "^4.19.0",
     "typescript": "^5.5.0",
-    "vitepress": "^1.6.4",
     "vitest": "^2.1.0"
-  },
-  "license": "MIT",
-  "dependencies": {
-    "@cdot65/prisma-airs-sdk": "file:../prisma-airs-sdk"
   }
 }

@@ -60,8 +60,15 @@ function main() {
   mkdirSync(AIRS_CONFIG_DIR, { recursive: true });
 
   // ---- Write or merge hooks.json ----
-  const beforePromptCmd = `npx tsx "${join(PROJECT_ROOT, "src", "hooks", "before-submit-prompt.ts")}"`;
-  const afterResponseCmd = `npx tsx "${join(PROJECT_ROOT, "src", "hooks", "after-agent-response.ts")}"`;
+  const distDir = join(PROJECT_ROOT, "dist", "hooks");
+  const beforePromptCmd = `node "${join(distDir, "before-submit-prompt.js")}"`;
+  const afterResponseCmd = `node "${join(distDir, "after-agent-response.js")}"`;
+
+  // Verify dist exists
+  if (!existsSync(distDir)) {
+    console.error("  ERROR: dist/ not found. Run 'npm run build' first.\n");
+    process.exit(1);
+  }
 
   let existingConfig: CursorHooksConfig | null = null;
   if (existsSync(HOOKS_JSON_PATH)) {
@@ -83,7 +90,7 @@ function main() {
     hooksConfig.hooks.beforeSubmitPrompt = [];
   }
   const hasPromptHook = hooksConfig.hooks.beforeSubmitPrompt.some(
-    (h) => h.command.includes("before-submit-prompt.ts"),
+    (h) => h.command.includes("before-submit-prompt"),
   );
   if (!hasPromptHook) {
     hooksConfig.hooks.beforeSubmitPrompt.push({
@@ -97,7 +104,7 @@ function main() {
     hooksConfig.hooks.afterAgentResponse = [];
   }
   const hasResponseHook = hooksConfig.hooks.afterAgentResponse.some(
-    (h) => h.command.includes("after-agent-response.ts"),
+    (h) => h.command.includes("after-agent-response"),
   );
   if (!hasResponseHook) {
     hooksConfig.hooks.afterAgentResponse.push({
