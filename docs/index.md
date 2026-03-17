@@ -10,16 +10,24 @@ title: Home
 
 **Real-time AI security scanning for the Cursor IDE**
 
+[![npm](https://img.shields.io/npm/v/@cdot65/prisma-airs-cursor-hooks.svg)](https://www.npmjs.com/package/@cdot65/prisma-airs-cursor-hooks)
 [![CI](https://github.com/cdot65/prisma-airs-cursor-hooks/actions/workflows/ci.yml/badge.svg)](https://github.com/cdot65/prisma-airs-cursor-hooks/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Node 18+](https://img.shields.io/badge/node-%3E%3D18-brightgreen.svg)](https://nodejs.org/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178c6.svg)](https://www.typescriptlang.org/)
 
 </div>
 
 ---
 
 Prisma AIRS Cursor Hooks intercepts prompts and AI responses in the Cursor IDE, scanning them in real-time via the [Prisma AI Runtime Security (AIRS)](https://www.paloaltonetworks.com/prisma/ai-runtime-security) Sync API. Detects prompt injections, malicious code, sensitive data leakage, toxic content, and policy violations before they reach the LLM or the developer.
+
+---
+
+## Install
+
+```bash
+npm install -g @cdot65/prisma-airs-cursor-hooks
+```
 
 ---
 
@@ -88,7 +96,7 @@ flowchart LR
 
     ---
 
-    Clone, build, set environment variables, and register hooks in Cursor.
+    Install from npm, set environment variables, and register hooks in Cursor.
 
     [:octicons-arrow-right-24: Installation](getting-started/installation.md)
 

@@ -15,7 +15,7 @@ Get Prisma AIRS scanning in Cursor in under 5 minutes.
     ```bash
     git clone https://github.com/cdot65/prisma-airs-cursor-hooks.git
     cd prisma-airs-cursor-hooks
-    npm install
+    npm install && npm run build
     ```
 
 ## 2. Set Your API Key
@@ -26,9 +26,17 @@ export AIRS_API_KEY=<your-x-pan-token>
 
 ## 3. Validate Connectivity
 
-```bash
-npm run validate-connection
-```
+=== "npm global install"
+
+    ```bash
+    prisma-airs-hooks validate-connection
+    ```
+
+=== "From source"
+
+    ```bash
+    npm run validate-connection
+    ```
 
 You should see a successful scan result confirming your API key and endpoint work.
 
@@ -67,9 +75,17 @@ With a detailed message explaining what was detected and why.
 
 ## 7. Review Scan Logs
 
-```bash
-npm run stats
-```
+=== "npm global install"
+
+    ```bash
+    prisma-airs-hooks stats
+    ```
+
+=== "From source"
+
+    ```bash
+    npm run stats
+    ```
 
 Shows scan totals, block rates, latency percentiles, and detection breakdowns.
 

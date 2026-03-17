@@ -7,23 +7,24 @@
 - **Prisma AIRS API key** (`x-pan-token`)
 - **AIRS security profiles** configured for prompt and response scanning
 
-## Option A: Install from npm (recommended)
+## Install
 
-```bash
-npm install -g @cdot65/prisma-airs-cursor-hooks
-```
+=== "npm (recommended)"
 
-This installs the CLI globally and makes the `prisma-airs-hooks` command available system-wide.
+    ```bash
+    npm install -g @cdot65/prisma-airs-cursor-hooks
+    ```
 
-## Option B: Install from source
+    This installs the CLI globally and makes the `prisma-airs-hooks` command available system-wide.
 
-```bash
-git clone https://github.com/cdot65/prisma-airs-cursor-hooks.git
-cd prisma-airs-cursor-hooks
-npm install   # also runs `npm run build` via prepare hook
-```
+=== "From source"
 
-`npm install` automatically compiles TypeScript to `dist/` for fast hook execution.
+    ```bash
+    git clone https://github.com/cdot65/prisma-airs-cursor-hooks.git
+    cd prisma-airs-cursor-hooks
+    npm install
+    npm run build
+    ```
 
 ## Environment Variables
 
@@ -48,25 +49,33 @@ export AIRS_RESPONSE_PROFILE=cursor-ide-response-profile        # optional
 | India | `https://service-in.api.aisecurity.paloaltonetworks.com` |
 | Singapore | `https://service-sg.api.aisecurity.paloaltonetworks.com` |
 
+## Validate Connectivity
+
+=== "npm global install"
+
+    ```bash
+    prisma-airs-hooks validate-connection
+    prisma-airs-hooks validate-detection
+    ```
+
+=== "From source"
+
+    ```bash
+    npm run validate-connection
+    npm run validate-detection
+    ```
+
 ## Register Hooks in Cursor
 
 === "npm global install"
 
     ```bash
-    # Project-level (current workspace only)
-    prisma-airs-hooks install
-
-    # Global (all workspaces)
     prisma-airs-hooks install --global
     ```
 
 === "From source"
 
     ```bash
-    # Project-level (current workspace only)
-    npm run install-hooks
-
-    # Global (all workspaces)
     npm run install-hooks -- --global
     ```
 
@@ -75,28 +84,36 @@ This writes `hooks.json` pointing at the precompiled JS in `dist/` and copies `a
 !!! tip "Global installation recommended"
     Use `--global` to install hooks at `~/.cursor/hooks.json` so they apply across all workspaces without per-project setup.
 
-## Validate
-
-```bash
-# Test API connectivity
-npm run validate-connection
-
-# Confirm detection is working
-npm run validate-detection
-
-# Verify hooks are registered
-npm run verify-hooks
-```
-
 ## Restart Cursor
 
 Cursor reads `hooks.json` at startup. **Restart Cursor** to activate the hooks.
 
+## Verify
+
+=== "npm global install"
+
+    ```bash
+    prisma-airs-hooks verify
+    ```
+
+=== "From source"
+
+    ```bash
+    npm run verify-hooks
+    ```
+
 ## Uninstall
 
-```bash
-npm run uninstall-hooks            # project-level
-npm run uninstall-hooks -- --global  # global
-```
+=== "npm global install"
+
+    ```bash
+    prisma-airs-hooks uninstall --global
+    ```
+
+=== "From source"
+
+    ```bash
+    npm run uninstall-hooks -- --global
+    ```
 
 Removes AIRS entries from `hooks.json` while preserving other hooks, config, and logs.
