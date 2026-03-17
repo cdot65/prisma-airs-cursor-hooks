@@ -30,7 +30,7 @@ Both hooks use Cursor's native hooks.json system. They receive structured JSON o
 ### Option A: Install from npm (recommended)
 
 ```bash
-npm install -g prisma-airs-cursor-hooks
+npm install -g @cdot65/prisma-airs-cursor-hooks
 ```
 
 Then register hooks in Cursor:

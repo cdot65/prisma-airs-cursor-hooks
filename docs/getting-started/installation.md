@@ -10,7 +10,7 @@
 ## Option A: Install from npm (recommended)
 
 ```bash
-npm install -g prisma-airs-cursor-hooks
+npm install -g @cdot65/prisma-airs-cursor-hooks
 ```
 
 This installs the CLI globally and makes the `prisma-airs-hooks` command available system-wide.
