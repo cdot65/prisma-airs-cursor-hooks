@@ -7,7 +7,7 @@ Get Prisma AIRS scanning in Cursor in under 5 minutes.
 === "npm (recommended)"
 
     ```bash
-    npm install -g prisma-airs-cursor-hooks
+    npm install -g @cdot65/prisma-airs-cursor-hooks
     ```
 
 === "From source"
