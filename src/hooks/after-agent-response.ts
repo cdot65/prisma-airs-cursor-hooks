@@ -1,14 +1,17 @@
 #!/usr/bin/env node
 /**
- * Cursor hook: afterAgentResponse
+ * Cursor hook: afterAgentResponse (observe-only)
  *
- * Intercepts the AI agent's response before it is displayed to the developer.
- * Extracts code blocks for dedicated malicious code scanning via code_response.
+ * Fires AFTER the AI response is already displayed to the developer.
+ * Cursor treats this as an observational hook — it cannot block or hide
+ * the response. We scan for DLP / malicious content and **log** violations
+ * for audit, but enforcement is best-effort: a userMessage warning is
+ * emitted so Cursor may surface it in the Hooks output panel.
  *
  * Cursor contract:
- *   stdin  → JSON { response, conversation_id, model, user_email, ... }
- *   stdout → JSON { permission: "allow"|"deny", userMessage?, agentMessage? }
- *   exit 0 = success, exit 2 = deny
+ *   stdin  → JSON { text, conversation_id, model, user_email, ... }
+ *   stdout → ignored by Cursor (we still emit JSON for logging consistency)
+ *   exit 0 = success (exit 2 has no deny effect for this hook)
  *   stderr → debug logs (visible in Cursor "Hooks" output panel)
  */
 import { loadConfig } from "../config.js";
@@ -67,12 +70,13 @@ async function main(): Promise<void> {
   const result = await scanResponse(config, input.text, logger);
 
   if (result.action === "block") {
-    const output: CursorHookOutput = {
-      permission: "deny",
-      userMessage: result.message ?? "Prisma AIRS blocked this response.",
-    };
-    respond(output);
-    process.exit(2);
+    // afterAgentResponse is observe-only — Cursor ignores deny/exit(2).
+    // Log the violation and surface a warning; the response is already visible.
+    console.error(`[AIRS] Response violation detected (observe-only, cannot block).`);
+    allowThrough(
+      result.message ?? "⚠ Prisma AIRS: this response was flagged but could not be blocked (afterAgentResponse is observe-only).",
+    );
+    return;
   }
 
   allowThrough(result.message);

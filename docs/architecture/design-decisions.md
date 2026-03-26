@@ -26,12 +26,21 @@ Hooks run as fresh processes on every prompt/response. Using `node dist/*.js` in
 
 ## Separate Cursor Hook Contracts
 
-Cursor uses different output formats for different hooks:
+Cursor uses different output formats and enforcement capabilities for different hooks:
 
-- `beforeSubmitPrompt`: `{ "continue": true/false, "user_message": "..." }`
-- `afterAgentResponse`: `{ "permission": "allow"/"deny" }` + exit code 2 for deny
+- `beforeSubmitPrompt` (**can block**): `{ "continue": true/false, "user_message": "..." }`
+- `afterAgentResponse` (**observe-only**): stdout is ignored by Cursor. The response is already displayed before the hook fires.
 
-This was discovered through testing -- `permission: "deny"` does not block prompts in `beforeSubmitPrompt`.
+This was discovered through testing — `permission: "deny"` does not block prompts in `beforeSubmitPrompt`, and more critically, `afterAgentResponse` cannot block or hide responses at all. See [Cursor Limitation](../reference/cursor-hooks-api.md#cursor-limitation-no-response-blocking) for the full list of blocking vs observe-only hooks.
+
+## Response Scanning is Audit-Only
+
+Because Cursor's `afterAgentResponse` is observe-only, response scanning serves a different purpose than prompt scanning:
+
+- **Prompt scanning** is a **gate** — it prevents violations from reaching the AI agent
+- **Response scanning** is an **audit trail** — it detects violations for compliance evidence, security alerting, and post-hoc analysis
+
+This informs our enforcement strategy: lean heavily on prompt-side blocking (prevent sensitive data from reaching the AI so it can't be echoed back) while using response scanning to catch anything that slips through for logging and review.
 
 ## Three-Mode System
 

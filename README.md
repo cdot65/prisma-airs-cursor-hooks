@@ -1,6 +1,6 @@
 # Prisma AIRS Cursor Hooks
 
-Cursor IDE hooks that scan prompts and AI responses in real-time using [Prisma AI Runtime Security (AIRS)](https://www.paloaltonetworks.com/prisma/ai-runtime-security). Intercepts prompts before they reach the AI agent and responses before they're displayed, scanning for prompt injections, malicious code, sensitive data leakage, and policy violations.
+Cursor IDE hooks that scan prompts and AI responses in real-time using [Prisma AI Runtime Security (AIRS)](https://www.paloaltonetworks.com/prisma/ai-runtime-security). Blocks prompts before they reach the AI agent and audits responses for security violations, scanning for prompt injections, malicious code, sensitive data leakage, and policy violations.
 
 Built on the [`@cdot65/prisma-airs-sdk`](https://github.com/cdot65/prisma-airs-sdk).
 
@@ -11,10 +11,10 @@ Developer prompt → beforeSubmitPrompt hook → AIRS Sync API → allow/block
                                                   ↓
                         Cursor AI Agent (if allowed)
                                                   ↓
-AI response → afterAgentResponse hook → code extractor → AIRS Sync API → allow/block
+AI response → afterAgentResponse hook → code extractor → AIRS Sync API → log/warn (observe-only)
 ```
 
-Both hooks use Cursor's native hooks.json system. They receive structured JSON on stdin, scan via the AIRS API, and reply on stdout (`{ "continue": false }` to block prompts, `{ "permission": "deny" }` + exit code 2 to block responses).
+Both hooks use Cursor's native hooks.json system. They receive structured JSON on stdin and scan via the AIRS API. `beforeSubmitPrompt` **can block** prompts (`{ "continue": false }`). `afterAgentResponse` is **observe-only** — it scans and logs violations but cannot block or hide the response (see [Cursor Limitation](#cursor-limitation-response-scanning-is-observe-only)).
 
 ## Prerequisites
 
@@ -66,8 +66,8 @@ prisma-airs-hooks install --global
 ```
 
 This writes `hooks.json` registering two hooks pointing at precompiled JS:
-- **`beforeSubmitPrompt`** — scans every prompt before it reaches the AI agent
-- **`afterAgentResponse`** — scans every AI response (with code extraction) before display
+- **`beforeSubmitPrompt`** — scans every prompt before it reaches the AI agent (**can block**)
+- **`afterAgentResponse`** — scans every AI response (with code extraction) for audit/logging (**observe-only**, see [limitation](#cursor-limitation-response-scanning-is-observe-only))
 
 It also copies `airs-config.json` to the hooks config directory.
 
@@ -125,7 +125,7 @@ Runtime config lives at `~/.cursor/hooks/airs-config.json`:
 | Mode | Behavior |
 |------|----------|
 | `observe` | Log scan results, never block (default — start here) |
-| `enforce` | Block prompts/responses that AIRS flags |
+| `enforce` | Block prompts that AIRS flags; log and warn on flagged responses (observe-only) |
 | `bypass` | Skip scanning entirely |
 
 ### Enforcement actions
@@ -160,6 +160,34 @@ prisma-airs-hooks uninstall --global
 ```
 
 Removes AIRS entries from `hooks.json` while preserving other hooks, config, and logs. Restart Cursor after uninstalling.
+
+## Cursor Limitation: Response Scanning is Observe-Only
+
+Cursor's `afterAgentResponse` hook is **observe-only**. The AI response streams directly to the user, and the hook fires after it is already visible. There is no `beforeAgentResponse` or equivalent hook that can intercept the response before display.
+
+The blocking hooks that exist all cover **actions**, not the response text itself:
+
+| Hook | What it gates |
+|------|---------------|
+| `beforeSubmitPrompt` | User prompt → AI |
+| `preToolUse` | Agent deciding to call a tool |
+| `beforeShellExecution` | Shell commands |
+| `beforeMCPExecution` | MCP tool calls |
+| `beforeReadFile` | File reads |
+| `subagentStart` | Sub-agent spawning |
+
+None of these intercept the AI's natural language or code response before display. This is a gap in Cursor's hook API.
+
+**What this means:**
+
+- **Prompt scanning (beforeSubmitPrompt)** can block. If AIRS detects DLP, injection, or policy violations in the prompt, it is stopped before reaching the AI.
+- **Response scanning (afterAgentResponse)** can only log and warn. The response is already visible to the developer. Violations are recorded in the audit log and a warning is surfaced in the Hooks output panel, but the content cannot be retracted.
+
+**Recommendations:**
+
+- Lean on prompt-side blocking — if AIRS catches sensitive data going in, the AI never sees it to echo back
+- Use response scanning for audit trails, compliance evidence, and security team alerting
+- Request a `beforeAgentResponse` hook from Cursor via their [community forum](https://forum.cursor.com)
 
 ## Development
 

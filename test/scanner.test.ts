@@ -186,10 +186,10 @@ describe("scanResponse", () => {
       logger,
     );
     expect(result.action).toBe("block");
-    expect(result.message).toContain("Response Blocked");
+    expect(result.message).toContain("Response Flagged");
+    expect(result.message).toContain("observe-only");
     expect(result.message).toContain("Malicious Code");
     expect(result.message).toContain("What happened");
-    expect(result.message).toContain("What to do");
     expect(result.message).toContain("Scan ID: scan-resp-1");
   });
 

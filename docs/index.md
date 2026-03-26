@@ -19,7 +19,7 @@ title: Home
 
 ---
 
-Prisma AIRS Cursor Hooks intercepts prompts and AI responses in the Cursor IDE, scanning them in real-time via the [Prisma AI Runtime Security (AIRS)](https://www.paloaltonetworks.com/prisma/ai-runtime-security) Sync API. Detects prompt injections, malicious code, sensitive data leakage, toxic content, and policy violations before they reach the LLM or the developer.
+Prisma AIRS Cursor Hooks scans prompts and AI responses in the Cursor IDE in real-time via the [Prisma AI Runtime Security (AIRS)](https://www.paloaltonetworks.com/prisma/ai-runtime-security) Sync API. **Blocks** prompts before they reach the LLM and **audits** AI responses for prompt injections, malicious code, sensitive data leakage, toxic content, and policy violations.
 
 ---
 
@@ -40,11 +40,15 @@ flowchart LR
     C -->|Allow| D[Cursor AI Agent]
     C -->|Block| E[Block Message]
     D --> F[AI Response]
-    F --> G[afterAgentResponse Hook]
+    F --> I[Display to Developer]
+    I --> G[afterAgentResponse Hook]
     G -->|AIRS Scan| H{Verdict}
-    H -->|Allow| I[Display to Developer]
-    H -->|Block| J[Block Message]
+    H -->|Clean| K[No Action]
+    H -->|Violation| J[Log + Warn]
 ```
+
+!!! warning "Response scanning is observe-only"
+    Cursor's `afterAgentResponse` fires **after** the response is displayed. It cannot block or retract content — it scans for audit, compliance, and security alerting. See [Cursor Limitation](reference/cursor-hooks-api.md#cursor-limitation-no-response-blocking).
 
 ---
 
@@ -60,11 +64,11 @@ flowchart LR
 
     [:octicons-arrow-right-24: Detection Services](features/detection-services.md)
 
--   :material-code-braces:{ .lg .middle } **Response & Code Scanning**
+-   :material-code-braces:{ .lg .middle } **Response & Code Auditing**
 
     ---
 
-    Parses AI responses to extract code blocks separately. Natural language and code are scanned independently, enabling malicious code detection via WildFire/ATP.
+    Parses AI responses to extract code blocks separately. Natural language and code are scanned independently for audit and compliance. Observe-only — [Cursor cannot block responses](reference/cursor-hooks-api.md#cursor-limitation-no-response-blocking).
 
     [:octicons-arrow-right-24: Code Extraction](features/code-extraction.md)
 

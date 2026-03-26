@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Cursor IDE hooks integrating Prisma AIRS (AI Runtime Security) into the developer workflow. Intercepts prompts (beforeSubmitPrompt) and responses (afterAgentResponse) via Cursor's hook system, scanning them against the Prisma AIRS Sync API for prompt injection, malicious code, DLP violations, and toxicity.
+Cursor IDE hooks integrating Prisma AIRS (AI Runtime Security) into the developer workflow. Scans prompts (beforeSubmitPrompt, **can block**) and responses (afterAgentResponse, **observe-only — cannot block**) via Cursor's hook system against the Prisma AIRS Sync API for prompt injection, malicious code, DLP violations, and toxicity.
 
 Published as `@cdot65/prisma-airs-cursor-hooks` on npm.
 
@@ -63,13 +63,13 @@ Developer prompt → beforeSubmitPrompt hook → AIRS Sync API (prompt scan) →
                                                   ↓
                         Cursor AI Agent (if allowed)
                                                   ↓
-AI response → afterAgentResponse hook → code extractor → AIRS Sync API (response + code_response scan) → allow/block
+AI response → afterAgentResponse hook → code extractor → AIRS Sync API (response + code_response scan) → log/warn (observe-only)
 ```
 
 ### Hook Contracts
 
-- **beforeSubmitPrompt**: stdin `{ prompt, user_email }` → stdout `{ continue: true/false, user_message? }`
-- **afterAgentResponse**: stdin `{ text }` → stdout `{ permission: "allow"/"deny" }` + exit code 2 on deny
+- **beforeSubmitPrompt** (can block): stdin `{ prompt, user_email }` → stdout `{ continue: true/false, user_message? }`
+- **afterAgentResponse** (observe-only): stdin `{ text }` → stdout ignored by Cursor. Scans and logs violations but **cannot block or hide** the response — Cursor displays it before the hook fires. Violations are surfaced as warnings in the Hooks output panel.
 
 ### Core Modules
 
@@ -80,7 +80,7 @@ AI response → afterAgentResponse hook → code extractor → AIRS Sync API (re
 | `src/logger.ts` | Structured JSON Lines logging with rotation |
 | `src/types.ts` | TypeScript interfaces |
 | `src/hooks/before-submit-prompt.ts` | Cursor beforeSubmitPrompt entry point |
-| `src/hooks/after-agent-response.ts` | Cursor afterAgentResponse entry point |
+| `src/hooks/after-agent-response.ts` | Cursor afterAgentResponse entry point (observe-only, cannot block) |
 | `src/code-extractor.ts` | Separates fenced/indented code blocks from natural language |
 | `src/scanner.ts` | Orchestrates prompt vs response scanning + DLP masking |
 | `src/circuit-breaker.ts` | Failure tracking with cooldown bypass |

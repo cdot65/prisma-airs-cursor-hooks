@@ -9,9 +9,10 @@ flowchart TB
         B -->|allow| C[AI Agent]
         B -->|block| D[Block Message]
         C --> E[AI Response]
-        E --> F[afterAgentResponse]
-        F -->|allow| G[Display Response]
-        F -->|block| H[Block Message]
+        E --> G[Display Response]
+        G --> F[afterAgentResponse]
+        F -->|violation| H[Log + Warn]
+        F -->|clean| I2[No Action]
     end
 
     subgraph AIRS Hooks
@@ -27,6 +28,9 @@ flowchart TB
     end
 ```
 
+!!! warning "Cursor limitation"
+    `afterAgentResponse` is **observe-only**. Cursor displays the AI response before the hook fires — violations are logged and warnings emitted, but the response cannot be blocked or retracted. See [Cursor Limitation](../reference/cursor-hooks-api.md#cursor-limitation-no-response-blocking) for details.
+
 ## Module Map
 
 | Module | Purpose |
@@ -41,7 +45,7 @@ flowchart TB
 | `src/log-rotation.ts` | Log file rotation at 10MB threshold |
 | `src/types.ts` | TypeScript interfaces for config, Cursor API, AIRS |
 | `src/hooks/before-submit-prompt.ts` | Cursor `beforeSubmitPrompt` entry point |
-| `src/hooks/after-agent-response.ts` | Cursor `afterAgentResponse` entry point |
+| `src/hooks/after-agent-response.ts` | Cursor `afterAgentResponse` entry point (observe-only) |
 
 ## Request Lifecycle
 
@@ -55,15 +59,15 @@ flowchart TB
 6. If `enforce` mode and verdict is `block`: output `{ "continue": false, "user_message": "..." }`
 7. If `observe` or verdict is `allow`: output `{ "continue": true }`
 
-### Response Scan (afterAgentResponse)
+### Response Scan (afterAgentResponse — observe-only)
 
-1. Cursor pipes `{ text, ... }` as JSON to stdin
+1. Cursor pipes `{ text, ... }` as JSON to stdin (**after the response is already displayed**)
 2. Hook loads config, initializes logger
 3. Code extractor splits response into natural language + code blocks
 4. Scanner sends both to AIRS (`response` + `code_response` content keys)
 5. `code_response` triggers WildFire/ATP malicious code detection
-6. If blocked: output `{ "permission": "deny" }` + exit code 2
-7. If allowed: output `{ "permission": "allow" }`
+6. If violation detected: log to audit trail + emit warning (cannot block — observe-only)
+7. If clean: output `{ "permission": "allow" }`
 
 ## Build Modes
 
