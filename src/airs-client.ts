@@ -10,6 +10,14 @@ import { getApiKey } from "./config.js";
 import { CircuitBreaker } from "./circuit-breaker.js";
 import { Logger } from "./logger.js";
 
+const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
+
+/** Build a session ID from user email + day of week (e.g. "alice@co.com:Wed") */
+function buildSessionId(appUser: string): string {
+  const day = DAYS[new Date().getUTCDay()];
+  return `${appUser}:${day}`;
+}
+
 let initialized = false;
 
 /** Module-level circuit breaker — persists across scans within a process */
@@ -84,7 +92,7 @@ export async function scanPromptContent(
     const result = await scanner.syncScan(
       { profile_name: config.profiles.prompt },
       content,
-      { metadata: { app_name: "cursor-ide", app_user: appUser } },
+      { sessionId: buildSessionId(appUser), metadata: { app_name: "cursor-ide", app_user: appUser } },
     );
     const latencyMs = Date.now() - start;
     breaker?.recordSuccess();
@@ -122,7 +130,7 @@ export async function scanResponseContent(
     const result = await scanner.syncScan(
       { profile_name: config.profiles.response },
       content,
-      { metadata: { app_name: "cursor-ide", app_user: appUser } },
+      { sessionId: buildSessionId(appUser), metadata: { app_name: "cursor-ide", app_user: appUser } },
     );
     const latencyMs = Date.now() - start;
     breaker?.recordSuccess();
@@ -169,7 +177,7 @@ export async function scanToolEventContent(
     const result = await scanner.syncScan(
       { profile_name: config.profiles.tool },
       content,
-      { metadata: { app_name: "cursor-ide", app_user: appUser } },
+      { sessionId: buildSessionId(appUser), metadata: { app_name: "cursor-ide", app_user: appUser } },
     );
     const latencyMs = Date.now() - start;
     breaker?.recordSuccess();
