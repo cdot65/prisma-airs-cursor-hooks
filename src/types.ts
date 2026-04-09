@@ -66,7 +66,7 @@ export interface AirsConfig {
 }
 
 /** Scan direction */
-export type ScanDirection = "prompt" | "response";
+export type ScanDirection = "prompt" | "response" | "tool";
 
 /** Log entry written by the structured logger */
 export interface ScanLogEntry {

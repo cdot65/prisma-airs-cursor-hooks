@@ -6,6 +6,7 @@ import type { AirsConfig } from "../src/types.js";
 vi.mock("../src/airs-client.js", () => ({
   scanPromptContent: vi.fn(),
   scanResponseContent: vi.fn(),
+  scanToolEventContent: vi.fn(),
   resetInit: vi.fn(),
   AISecSDKException: class AISecSDKException extends Error {
     constructor(message: string) {
@@ -15,13 +16,13 @@ vi.mock("../src/airs-client.js", () => ({
   },
 }));
 
-import { scanPrompt, scanResponse } from "../src/scanner.js";
-import { scanPromptContent, scanResponseContent } from "../src/airs-client.js";
+import { scanPrompt, scanResponse, scanToolEvent } from "../src/scanner.js";
+import { scanPromptContent, scanResponseContent, scanToolEventContent } from "../src/airs-client.js";
 
 const mockConfig: AirsConfig = {
   endpoint: "https://test.api.prismacloud.io",
-  apiKeyEnvVar: "AIRS_API_KEY",
-  profiles: { prompt: "test-prompt", response: "test-response" },
+  apiKeyEnvVar: "PRISMA_AIRS_API_KEY",
+  profiles: { prompt: "test-prompt", response: "test-response", tool: "test-tool" },
   mode: "observe",
   timeout_ms: 3000,
   retry: { enabled: false, max_attempts: 0, backoff_base_ms: 50 },
@@ -47,14 +48,14 @@ describe("scanPrompt", () => {
   let logger: Logger;
 
   beforeEach(() => {
-    process.env.AIRS_API_KEY = "test-key";
+    process.env.PRISMA_AIRS_API_KEY = "test-key";
     logger = new Logger("/dev/null");
     vi.mocked(scanPromptContent).mockReset();
     vi.mocked(scanResponseContent).mockReset();
   });
 
   afterEach(() => {
-    delete process.env.AIRS_API_KEY;
+    delete process.env.PRISMA_AIRS_API_KEY;
   });
 
   it("passes through in observe mode even on block verdict", async () => {
@@ -122,14 +123,14 @@ describe("scanResponse", () => {
   let logger: Logger;
 
   beforeEach(() => {
-    process.env.AIRS_API_KEY = "test-key";
+    process.env.PRISMA_AIRS_API_KEY = "test-key";
     logger = new Logger("/dev/null");
     vi.mocked(scanPromptContent).mockReset();
     vi.mocked(scanResponseContent).mockReset();
   });
 
   afterEach(() => {
-    delete process.env.AIRS_API_KEY;
+    delete process.env.PRISMA_AIRS_API_KEY;
   });
 
   it("extracts code and sends via SDK", async () => {
@@ -198,5 +199,67 @@ describe("scanResponse", () => {
     const result = await scanResponse(config, "test", logger);
     expect(result.action).toBe("pass");
     expect(scanResponseContent).not.toHaveBeenCalled();
+  });
+});
+
+describe("scanToolEvent", () => {
+  let logger: Logger;
+
+  beforeEach(() => {
+    process.env.PRISMA_AIRS_API_KEY = "test-key";
+    logger = new Logger("/dev/null");
+    vi.mocked(scanToolEventContent).mockReset();
+  });
+
+  afterEach(() => {
+    delete process.env.PRISMA_AIRS_API_KEY;
+  });
+
+  it("scans tool event and passes in observe mode", async () => {
+    vi.mocked(scanToolEventContent).mockResolvedValue({
+      result: {
+        action: "block",
+        scan_id: "scan-tool-1",
+        report_id: "report-tool-1",
+        category: "malicious",
+        prompt_detected: { injection: true },
+      } as any,
+      latencyMs: 100,
+    });
+
+    const result = await scanToolEvent(mockConfig, "MCP:github:get_file", '{"path":"x"}', undefined, logger);
+    expect(result.action).toBe("pass");
+  });
+
+  it("blocks tool event in enforce mode", async () => {
+    vi.mocked(scanToolEventContent).mockResolvedValue({
+      result: {
+        action: "block",
+        scan_id: "scan-tool-2",
+        report_id: "report-tool-2",
+        category: "malicious",
+        prompt_detected: { injection: true },
+      } as any,
+      latencyMs: 100,
+    });
+
+    const config = { ...mockConfig, mode: "enforce" as const };
+    const result = await scanToolEvent(config, "MCP:github:get_file", '{"path":"x"}', undefined, logger);
+    expect(result.action).toBe("block");
+    expect(result.message).toContain("MCP Tool Call");
+    expect(result.message).toContain("Prompt Injection");
+  });
+
+  it("passes in bypass mode without calling API", async () => {
+    const config = { ...mockConfig, mode: "bypass" as const };
+    const result = await scanToolEvent(config, "MCP:s:t", "input", undefined, logger);
+    expect(result.action).toBe("pass");
+    expect(scanToolEventContent).not.toHaveBeenCalled();
+  });
+
+  it("fails open on SDK error", async () => {
+    vi.mocked(scanToolEventContent).mockRejectedValue(new Error("network down"));
+    const result = await scanToolEvent(mockConfig, "MCP:s:t", "input", undefined, logger);
+    expect(result.action).toBe("pass");
   });
 });

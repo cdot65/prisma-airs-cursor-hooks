@@ -3,8 +3,10 @@ import type { AirsConfig, HookResult, ScanDirection, ScanLogEntry } from "./type
 import {
   scanPromptContent,
   scanResponseContent,
+  scanToolEventContent,
   AISecSDKException,
 } from "./airs-client.js";
+import { parseToolName } from "./tool-name-parser.js";
 import { extractCode, joinCodeBlocks } from "./code-extractor.js";
 import { Logger } from "./logger.js";
 import { getEnforcementAction, maskContent, DEFAULT_ENFORCEMENT } from "./dlp-masking.js";
@@ -157,6 +159,35 @@ function buildResponseBlockMessage(
     "",
     "  What to do:",
     "    - Do NOT use the flagged content (it may contain sensitive data or unsafe code).",
+    "    - If you believe this is a false positive, contact your security team",
+    `      and reference Scan ID: ${scanId}`,
+    "",
+    "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
+    "",
+  ].join("\n");
+}
+
+function buildToolBlockMessage(
+  toolName: string,
+  detections: string[],
+  category: string,
+  profileName: string,
+  scanId: string,
+): string {
+  const detectionList = detections.map(friendlyDetectionName).join(", ");
+  return [
+    "",
+    "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
+    "  Prisma AIRS — MCP Tool Call Blocked",
+    "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
+    "",
+    `  Tool:       ${toolName}`,
+    `  What happened:  The tool input was flagged by the ${detectionList} security check.`,
+    `  Category:       ${category}`,
+    `  Profile:        ${profileName}`,
+    "",
+    "  What to do:",
+    "    - The tool input may contain injection patterns or malicious parameters.",
     "    - If you believe this is a false positive, contact your security team",
     `      and reference Scan ID: ${scanId}`,
     "",
@@ -375,6 +406,110 @@ export async function scanResponse(
       event: "scan_error",
       scan_id: "",
       direction: "response",
+      verdict: "allow",
+      action_taken: "error",
+      latency_ms: 0,
+      detection_services_triggered: [],
+      error: message,
+    });
+
+    if (isAuth) {
+      return { action: "pass", message: `Warning: ${message}` };
+    }
+    return { action: "pass" };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// scanToolEvent — called by beforeMCPExecution and postToolUse hooks
+// ---------------------------------------------------------------------------
+
+export async function scanToolEvent(
+  config: AirsConfig,
+  toolName: string,
+  input: string | undefined,
+  output: string | undefined,
+  logger: Logger,
+): Promise<HookResult> {
+  if (config.mode === "bypass") {
+    logger.logEvent("scan_bypassed", { direction: "tool" });
+    return { action: "pass" };
+  }
+
+  if (!input?.trim() && !output?.trim()) {
+    return { action: "pass" };
+  }
+
+  const appUser = getAppUser();
+  const parsed = parseToolName(toolName);
+
+  try {
+    const { result, latencyMs } = await scanToolEventContent(
+      config, parsed.server, parsed.tool, input, output, appUser, logger,
+    );
+
+    const verdict = result.action === "block" ? "block" : "allow";
+    const { services: detections, findings } = extractDetections(result);
+
+    const actionTaken =
+      config.mode === "observe"
+        ? "observed"
+        : verdict === "block"
+          ? "blocked"
+          : "allowed";
+
+    logger.logScan({
+      event: "scan_complete",
+      scan_id: result.scan_id ?? "",
+      direction: "tool" as ScanDirection,
+      verdict: verdict as "allow" | "block",
+      action_taken: actionTaken,
+      latency_ms: latencyMs,
+      detection_services_triggered: detections,
+      error: null,
+    });
+
+    if (config.mode === "enforce" && verdict === "block") {
+      const enforcement = config.enforcement ?? DEFAULT_ENFORCEMENT;
+      const enforcementAction = getEnforcementAction(findings, enforcement);
+
+      if (enforcementAction === "allow") {
+        return { action: "pass" };
+      }
+
+      if (enforcementAction === "mask") {
+        const maskedServices = findings
+          .filter((f) => (enforcement[f.detection_service] ?? "block") === "mask")
+          .map((f) => f.detection_service);
+        logger.logEvent("dlp_mask_applied", { direction: "tool", services: maskedServices });
+        return { action: "pass", message: buildMaskedMessage(maskedServices) };
+      }
+
+      return {
+        action: "block",
+        message: buildToolBlockMessage(
+          toolName,
+          detections,
+          result.category ?? "policy violation",
+          config.profiles.tool,
+          result.scan_id ?? "unknown",
+        ),
+      };
+    }
+
+    return { action: "pass" };
+  } catch (err) {
+    const isAuth =
+      err instanceof AISecSDKException && err.message.includes("401");
+
+    const message = isAuth
+      ? "AIRS authentication failed. Check your API key."
+      : "AIRS scan failed — allowing tool event (fail-open)";
+
+    logger.logScan({
+      event: "scan_error",
+      scan_id: "",
+      direction: "tool",
       verdict: "allow",
       action_taken: "error",
       latency_ms: 0,
