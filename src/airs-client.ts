@@ -133,4 +133,51 @@ export async function scanResponseContent(
   }
 }
 
+/** Scan a tool event (MCP input/output) via AIRS Sync API using the SDK */
+export async function scanToolEventContent(
+  config: AirsConfig,
+  serverName: string,
+  toolInvoked: string,
+  input: string | undefined,
+  output: string | undefined,
+  appUser: string,
+  logger?: Logger,
+): Promise<{ result: ScanResponse; latencyMs: number }> {
+  ensureInit(config, logger);
+
+  if (breaker && !breaker.shouldAllow()) {
+    logger?.logEvent("scan_bypassed_circuit_open", { direction: "tool" });
+    return { result: circuitOpenResult(), latencyMs: 0 };
+  }
+
+  const scanner = new Scanner();
+  const toolEvent: Record<string, unknown> = {
+    metadata: {
+      ecosystem: "mcp",
+      method: "tools/call",
+      server_name: serverName,
+      tool_invoked: toolInvoked,
+    },
+  };
+  if (input !== undefined) toolEvent.input = input;
+  if (output !== undefined) toolEvent.output = output;
+
+  const content = new Content({ toolEvent });
+
+  const start = Date.now();
+  try {
+    const result = await scanner.syncScan(
+      { profile_name: config.profiles.tool },
+      content,
+      { metadata: { app_name: "cursor-ide", app_user: appUser } },
+    );
+    const latencyMs = Date.now() - start;
+    breaker?.recordSuccess();
+    return { result, latencyMs };
+  } catch (err) {
+    breaker?.recordFailure();
+    throw err;
+  }
+}
+
 export { AISecSDKException };
