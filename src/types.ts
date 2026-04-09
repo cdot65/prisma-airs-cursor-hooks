@@ -24,6 +24,7 @@ export interface LoggingConfig {
 export interface ProfileConfig {
   prompt: string;
   response: string;
+  tool: string;
 }
 
 /** Per-detection-service enforcement action */
@@ -120,6 +121,20 @@ export interface BeforeSubmitPromptInput extends CursorHookInput {
 /** stdin for afterAgentResponse hook */
 export interface AfterAgentResponseInput extends CursorHookInput {
   text: string;
+}
+
+/** stdin for beforeMCPExecution hook */
+export interface BeforeMCPExecutionInput extends CursorHookInput {
+  tool_name: string;
+  tool_input: unknown;
+}
+
+/** stdin for postToolUse hook */
+export interface PostToolUseInput extends CursorHookInput {
+  tool_name: string;
+  tool_input: unknown;
+  tool_output: unknown;
+  tool_use_id?: string;
 }
 
 /**
