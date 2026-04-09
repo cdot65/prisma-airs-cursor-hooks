@@ -21,7 +21,7 @@ Get Prisma AIRS scanning in Cursor in under 5 minutes.
 ## 2. Set Your API Key
 
 ```bash
-export AIRS_API_KEY=<your-x-pan-token>
+export PRISMA_AIRS_API_KEY=<your-x-pan-token>
 ```
 
 ## 3. Validate Connectivity
@@ -56,9 +56,11 @@ You should see a successful scan result confirming your API key and endpoint wor
 
 ## 5. Restart Cursor
 
-Quit and reopen Cursor. Open **Settings > Hooks** to confirm both hooks appear:
+Quit and reopen Cursor. Open **Settings > Hooks** to confirm all four hooks appear:
 
 - `beforeSubmitPrompt`
+- `beforeMCPExecution`
+- `postToolUse`
 - `afterAgentResponse`
 
 ## 6. Test It

@@ -4,15 +4,16 @@
 
 | Variable | Description |
 |----------|-------------|
-| `AIRS_API_KEY` | Prisma AIRS API key (`x-pan-token`). Used for authentication. |
+| `PRISMA_AIRS_API_KEY` | Prisma AIRS API key (`x-pan-token`). Used for authentication. |
 
 ## Optional
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `AIRS_API_ENDPOINT` | `https://service.api.aisecurity.paloaltonetworks.com` | Regional AIRS API base URL |
-| `AIRS_PROMPT_PROFILE` | `cursor-ide-prompt-profile` | Security profile name for prompt scanning |
-| `AIRS_RESPONSE_PROFILE` | `cursor-ide-response-profile` | Security profile name for response scanning |
+| `PRISMA_AIRS_API_ENDPOINT` | `https://service.api.aisecurity.paloaltonetworks.com` | Regional AIRS API base URL |
+| `PRISMA_AIRS_PROMPT_PROFILE` | `cursor-ide-prompt-profile` | Security profile name for prompt scanning |
+| `PRISMA_AIRS_RESPONSE_PROFILE` | `cursor-ide-response-profile` | Security profile name for response scanning |
+| `PRISMA_AIRS_TOOL_PROFILE` | `cursor-ide-tool-profile` | Security profile name for MCP/tool scanning |
 
 ## Cursor-Provided
 
@@ -65,16 +66,17 @@ The resolved value is sent to AIRS as:
 
 ```bash
 # Add to ~/.zshrc or ~/.zsh.d/20-exports.zsh
-export AIRS_API_KEY="your-key-here"
-export AIRS_PROMPT_PROFILE="Cursor IDE - Hooks"
-export AIRS_RESPONSE_PROFILE="Cursor IDE - Hooks"
+export PRISMA_AIRS_API_KEY="your-key-here"
+export PRISMA_AIRS_PROMPT_PROFILE="Cursor IDE - Hooks"
+export PRISMA_AIRS_RESPONSE_PROFILE="Cursor IDE - Hooks"
+export PRISMA_AIRS_TOOL_PROFILE="Cursor IDE - Hooks"
 ```
 
 ### macOS / Linux (bash)
 
 ```bash
 # Add to ~/.bashrc or ~/.bash_profile
-export AIRS_API_KEY="your-key-here"
+export PRISMA_AIRS_API_KEY="your-key-here"
 ```
 
 !!! info "Cursor inherits your shell environment"

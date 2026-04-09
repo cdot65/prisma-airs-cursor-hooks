@@ -29,18 +29,40 @@ Hooks run as fresh processes on every prompt/response. Using `node dist/*.js` in
 Cursor uses different output formats and enforcement capabilities for different hooks:
 
 - `beforeSubmitPrompt` (**can block**): `{ "continue": true/false, "user_message": "..." }`
+- `beforeMCPExecution` (**can block**): `{ "continue": true/false, "user_message": "..." }`
+- `postToolUse` (**observe-only**): stdout is ignored by Cursor. The tool has already executed before the hook fires.
 - `afterAgentResponse` (**observe-only**): stdout is ignored by Cursor. The response is already displayed before the hook fires.
 
-This was discovered through testing — `permission: "deny"` does not block prompts in `beforeSubmitPrompt`, and more critically, `afterAgentResponse` cannot block or hide responses at all. See [Cursor Limitation](../reference/cursor-hooks-api.md#cursor-limitation-no-response-blocking) for the full list of blocking vs observe-only hooks.
+This was discovered through testing — `permission: "deny"` does not block prompts in `beforeSubmitPrompt`, and more critically, `postToolUse` and `afterAgentResponse` cannot block or hide content at all. See [Cursor Limitation](../reference/cursor-hooks-api.md#cursor-limitation-no-response-blocking) for the full list of blocking vs observe-only hooks.
 
-## Response Scanning is Audit-Only
+## Response and Tool Output Scanning is Audit-Only
 
-Because Cursor's `afterAgentResponse` is observe-only, response scanning serves a different purpose than prompt scanning:
+Because Cursor's `afterAgentResponse` and `postToolUse` are observe-only, they serve different purposes than blocking hooks:
 
-- **Prompt scanning** is a **gate** — it prevents violations from reaching the AI agent
-- **Response scanning** is an **audit trail** — it detects violations for compliance evidence, security alerting, and post-hoc analysis
+- **Prompt scanning** (`beforeSubmitPrompt`) is a **gate** — prevents violations from reaching the AI agent
+- **MCP scanning** (`beforeMCPExecution`) is a **gate** — prevents malicious tool invocations before execution
+- **Response/tool output scanning** (`afterAgentResponse`, `postToolUse`) is an **audit trail** — detects violations for compliance evidence, security alerting, and post-hoc analysis
 
-This informs our enforcement strategy: lean heavily on prompt-side blocking (prevent sensitive data from reaching the AI so it can't be echoed back) while using response scanning to catch anything that slips through for logging and review.
+This informs our enforcement strategy: lean heavily on the two blocking hooks while using the observe-only hooks to catch anything that slips through for logging and review.
+
+## Tool Event Scanning
+
+MCP tool calls are scanned using the `tool_event` AIRS content type. This routes to a security profile tuned for tool-call patterns (function names, parameter values, injection attempts via tool arguments).
+
+`postToolUse` routes scans differently based on `tool_name`:
+- `MCP:server:tool` → `tool_event` (both input and output)
+- `Bash` → `response` (output only, for DLP/code detection)
+- `Write` / `Edit` → `prompt` (new file content for DLP)
+- Internal tools (ReadFile, ListDir, etc.) → skipped
+
+## Configurable Content Limits
+
+Large inputs (multi-file reads, huge Bash outputs) can exceed what the AIRS API can meaningfully scan. Two thresholds are configurable in `content_limits`:
+
+- `max_scan_bytes` (default 50KB): inputs larger than this are **skipped** entirely (fail-open)
+- `truncate_bytes` (default 20KB): inputs between `truncate_bytes` and `max_scan_bytes` are **truncated** before scanning
+
+This prevents excessive latency and API errors while ensuring most real-world inputs are fully scanned.
 
 ## Three-Mode System
 

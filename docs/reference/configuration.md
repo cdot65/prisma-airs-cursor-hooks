@@ -8,23 +8,24 @@ Complete reference for `airs-config.json`.
 
 - **Type:** `string`
 - **Default:** `https://service.api.aisecurity.paloaltonetworks.com`
-- **Description:** AIRS Sync API base URL. Supports `${AIRS_API_ENDPOINT}` env var reference.
+- **Description:** AIRS Sync API base URL. Supports `${PRISMA_AIRS_API_ENDPOINT}` env var reference.
 
 ### `apiKeyEnvVar`
 
 - **Type:** `string`
-- **Default:** `AIRS_API_KEY`
+- **Default:** `PRISMA_AIRS_API_KEY`
 - **Description:** Name of the environment variable containing the `x-pan-token` API key.
 
 ### `profiles`
 
-- **Type:** `{ prompt: string, response: string }`
-- **Description:** AIRS security profile names for prompt and response scanning.
+- **Type:** `{ prompt: string, response: string, tool?: string }`
+- **Description:** AIRS security profile names for prompt, response, and tool scanning.
 
 | Field | Env Var | Default |
 |-------|---------|---------|
-| `profiles.prompt` | `AIRS_PROMPT_PROFILE` | `cursor-ide-prompt-profile` |
-| `profiles.response` | `AIRS_RESPONSE_PROFILE` | `cursor-ide-response-profile` |
+| `profiles.prompt` | `PRISMA_AIRS_PROMPT_PROFILE` | `cursor-ide-prompt-profile` |
+| `profiles.response` | `PRISMA_AIRS_RESPONSE_PROFILE` | `cursor-ide-response-profile` |
+| `profiles.tool` | `PRISMA_AIRS_TOOL_PROFILE` | `cursor-ide-tool-profile` |
 
 ### `mode`
 
@@ -95,3 +96,19 @@ Valid values: `"block"`, `"mask"`, `"allow"`.
 ```
 
 See [Circuit Breaker](../features/circuit-breaker.md).
+
+### `content_limits`
+
+```json
+{
+  "max_scan_bytes": 51200,
+  "truncate_bytes": 20480
+}
+```
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `max_scan_bytes` | `number` | `51200` (50KB) | Inputs larger than this are skipped entirely (fail-open) |
+| `truncate_bytes` | `number` | `20480` (20KB) | Inputs above this threshold are truncated before scanning |
+
+Applies to all scan paths including `beforeSubmitPrompt`, `beforeMCPExecution`, `postToolUse`, and `afterAgentResponse`. Prevents excessive latency and API errors for large tool outputs, Bash results, or multi-file reads.

@@ -11,10 +11,14 @@ Developer prompt → beforeSubmitPrompt hook → AIRS Sync API → allow/block
                                                   ↓
                         Cursor AI Agent (if allowed)
                                                   ↓
+               MCP Tool Call → beforeMCPExecution hook → AIRS Sync API (tool_event) → allow/block
+                                                  ↓
+               Tool Output → postToolUse hook → AIRS Sync API → log/warn (observe-only)
+                                                  ↓
 AI response → afterAgentResponse hook → code extractor → AIRS Sync API → log/warn (observe-only)
 ```
 
-Both hooks use Cursor's native hooks.json system. They receive structured JSON on stdin and scan via the AIRS API. `beforeSubmitPrompt` **can block** prompts (`{ "continue": false }`). `afterAgentResponse` is **observe-only** — it scans and logs violations but cannot block or hide the response (see [Cursor Limitation](#cursor-limitation-response-scanning-is-observe-only)).
+All hooks use Cursor's native hooks.json system. They receive structured JSON on stdin and scan via the AIRS API. `beforeSubmitPrompt` and `beforeMCPExecution` **can block** (`{ "continue": false }`). `postToolUse` and `afterAgentResponse` are **observe-only** — they scan and log violations but cannot block or hide content (see [Cursor Limitation](#cursor-limitation-response-scanning-is-observe-only)).
 
 ## Prerequisites
 
@@ -36,13 +40,14 @@ npm install -g @cdot65/prisma-airs-cursor-hooks
 Add to your shell profile (`~/.zshrc`, `~/.bashrc`, etc.):
 
 ```bash
-export AIRS_API_KEY=<your-x-pan-token>
-export AIRS_API_ENDPOINT=https://service.api.aisecurity.paloaltonetworks.com  # optional, defaults to US
-export AIRS_PROMPT_PROFILE=cursor-ide-prompt-profile      # optional
-export AIRS_RESPONSE_PROFILE=cursor-ide-response-profile  # optional
+export PRISMA_AIRS_API_KEY=<your-x-pan-token>
+export PRISMA_AIRS_API_ENDPOINT=https://service.api.aisecurity.paloaltonetworks.com  # optional, defaults to US
+export PRISMA_AIRS_PROMPT_PROFILE=cursor-ide-prompt-profile      # optional
+export PRISMA_AIRS_RESPONSE_PROFILE=cursor-ide-response-profile  # optional
+export PRISMA_AIRS_TOOL_PROFILE=cursor-ide-tool-profile          # optional
 ```
 
-> **Note:** Cursor inherits your shell environment, so hooks automatically have access to these variables. Only `AIRS_API_KEY` is required — endpoint defaults to US and profile names default to `cursor-ide-prompt-profile` / `cursor-ide-response-profile`.
+> **Note:** Cursor inherits your shell environment, so hooks automatically have access to these variables. Only `PRISMA_AIRS_API_KEY` is required — endpoint defaults to US and profile names default to `cursor-ide-prompt-profile` / `cursor-ide-response-profile` / `cursor-ide-tool-profile`.
 
 Available regional endpoints:
 | Region | Endpoint |
@@ -65,8 +70,10 @@ prisma-airs-hooks validate-detection
 prisma-airs-hooks install --global
 ```
 
-This writes `hooks.json` registering two hooks pointing at precompiled JS:
+This writes `hooks.json` registering four hooks pointing at precompiled JS:
 - **`beforeSubmitPrompt`** — scans every prompt before it reaches the AI agent (**can block**)
+- **`beforeMCPExecution`** — scans MCP tool inputs before execution via `tool_event` content type (**can block**)
+- **`postToolUse`** — scans MCP, Shell, Write, and Edit tool outputs for DLP and violations (**observe-only**)
 - **`afterAgentResponse`** — scans every AI response (with code extraction) for audit/logging (**observe-only**, see [limitation](#cursor-limitation-response-scanning-is-observe-only))
 
 It also copies `airs-config.json` to the hooks config directory.
@@ -87,11 +94,12 @@ Runtime config lives at `~/.cursor/hooks/airs-config.json`:
 
 ```json
 {
-  "endpoint": "${AIRS_API_ENDPOINT}",
-  "apiKeyEnvVar": "AIRS_API_KEY",
+  "endpoint": "${PRISMA_AIRS_API_ENDPOINT}",
+  "apiKeyEnvVar": "PRISMA_AIRS_API_KEY",
   "profiles": {
     "prompt": "cursor-ide-prompt-profile",
-    "response": "cursor-ide-response-profile"
+    "response": "cursor-ide-response-profile",
+    "tool": "cursor-ide-tool-profile"
   },
   "mode": "observe",
   "timeout_ms": 3000,
@@ -116,6 +124,10 @@ Runtime config lives at `~/.cursor/hooks/airs-config.json`:
     "enabled": true,
     "failure_threshold": 5,
     "cooldown_ms": 60000
+  },
+  "content_limits": {
+    "max_scan_bytes": 51200,
+    "truncate_bytes": 20480
   }
 }
 ```

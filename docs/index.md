@@ -39,16 +39,24 @@ flowchart LR
     B -->|AIRS Scan| C{Verdict}
     C -->|Allow| D[Cursor AI Agent]
     C -->|Block| E[Block Message]
-    D --> F[AI Response]
-    F --> I[Display to Developer]
-    I --> G[afterAgentResponse Hook]
+    D --> F[MCP Tool Call]
+    F --> G[beforeMCPExecution Hook]
     G -->|AIRS Scan| H{Verdict}
-    H -->|Clean| K[No Action]
-    H -->|Violation| J[Log + Warn]
+    H -->|Allow| I[Tool Execution]
+    H -->|Block| J[Block Message]
+    I --> K[Tool Output]
+    K --> L[postToolUse Hook]
+    L -->|AIRS Scan| M[Log + Warn]
+    D --> N[AI Response]
+    N --> O[Display to Developer]
+    O --> P[afterAgentResponse Hook]
+    P -->|AIRS Scan| Q{Verdict}
+    Q -->|Clean| R[No Action]
+    Q -->|Violation| S[Log + Warn]
 ```
 
-!!! warning "Response scanning is observe-only"
-    Cursor's `afterAgentResponse` fires **after** the response is displayed. It cannot block or retract content — it scans for audit, compliance, and security alerting. See [Cursor Limitation](reference/cursor-hooks-api.md#cursor-limitation-no-response-blocking).
+!!! warning "postToolUse and afterAgentResponse are observe-only"
+    `postToolUse` and `afterAgentResponse` fire **after** content is already processed or displayed. They cannot block or retract content — they scan for audit, compliance, and security alerting. See [Cursor Limitation](reference/cursor-hooks-api.md#cursor-limitation-no-response-blocking).
 
 ---
 
@@ -71,6 +79,14 @@ flowchart LR
     Parses AI responses to extract code blocks separately. Natural language and code are scanned independently for audit and compliance. Observe-only — [Cursor cannot block responses](reference/cursor-hooks-api.md#cursor-limitation-no-response-blocking).
 
     [:octicons-arrow-right-24: Code Extraction](features/code-extraction.md)
+
+-   :material-tools:{ .lg .middle } **Tool & MCP Scanning**
+
+    ---
+
+    Scans MCP tool inputs before execution (`beforeMCPExecution`, can block) and tool outputs after execution (`postToolUse`, observe-only). Routes by tool type: MCP → `tool_event`, Bash → `response`, Write/Edit → DLP scan.
+
+    [:octicons-arrow-right-24: Architecture](architecture/scanning-flow.md)
 
 -   :material-shield-lock:{ .lg .middle } **Enforce or Observe**
 

@@ -11,11 +11,12 @@ Runtime configuration lives at `.cursor/hooks/airs-config.json` (project-level) 
 
 ```json
 {
-  "endpoint": "${AIRS_API_ENDPOINT}",
-  "apiKeyEnvVar": "AIRS_API_KEY",
+  "endpoint": "${PRISMA_AIRS_API_ENDPOINT}",
+  "apiKeyEnvVar": "PRISMA_AIRS_API_KEY",
   "profiles": {
-    "prompt": "${AIRS_PROMPT_PROFILE}",
-    "response": "${AIRS_RESPONSE_PROFILE}"
+    "prompt": "${PRISMA_AIRS_PROMPT_PROFILE}",
+    "response": "${PRISMA_AIRS_RESPONSE_PROFILE}",
+    "tool": "${PRISMA_AIRS_TOOL_PROFILE}"
   },
   "mode": "enforce",
   "timeout_ms": 3000,
@@ -71,9 +72,10 @@ Config values containing `${VAR_NAME}` are resolved from environment variables a
 
 | Config Field | Env Var | Default |
 |-------------|---------|---------|
-| `endpoint` | `AIRS_API_ENDPOINT` | `https://service.api.aisecurity.paloaltonetworks.com` |
-| `profiles.prompt` | `AIRS_PROMPT_PROFILE` | `cursor-ide-prompt-profile` |
-| `profiles.response` | `AIRS_RESPONSE_PROFILE` | `cursor-ide-response-profile` |
+| `endpoint` | `PRISMA_AIRS_API_ENDPOINT` | `https://service.api.aisecurity.paloaltonetworks.com` |
+| `profiles.prompt` | `PRISMA_AIRS_PROMPT_PROFILE` | `cursor-ide-prompt-profile` |
+| `profiles.response` | `PRISMA_AIRS_RESPONSE_PROFILE` | `cursor-ide-response-profile` |
+| `profiles.tool` | `PRISMA_AIRS_TOOL_PROFILE` | `cursor-ide-tool-profile` |
 
 ## Logging
 

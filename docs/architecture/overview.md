@@ -8,6 +8,13 @@ flowchart TB
         A[Developer Prompt] --> B[beforeSubmitPrompt]
         B -->|allow| C[AI Agent]
         B -->|block| D[Block Message]
+        C --> T[MCP Tool Call]
+        T --> U[beforeMCPExecution]
+        U -->|allow| V[Tool Execution]
+        U -->|block| W[Block Message]
+        V --> X[Tool Output]
+        X --> Y[postToolUse]
+        Y -->|violation| Z[Log + Warn]
         C --> E[AI Response]
         E --> G[Display Response]
         G --> F[afterAgentResponse]
@@ -22,6 +29,8 @@ flowchart TB
         K --> L[Circuit Breaker]
         L --> M[Prisma AIRS API]
 
+        U --> I
+        Y --> I
         F --> I
         F --> N[Code Extractor]
         N --> J
@@ -29,7 +38,7 @@ flowchart TB
 ```
 
 !!! warning "Cursor limitation"
-    `afterAgentResponse` is **observe-only**. Cursor displays the AI response before the hook fires — violations are logged and warnings emitted, but the response cannot be blocked or retracted. See [Cursor Limitation](../reference/cursor-hooks-api.md#cursor-limitation-no-response-blocking) for details.
+    `postToolUse` and `afterAgentResponse` are **observe-only**. Cursor processes tool outputs and displays AI responses before these hooks fire — violations are logged and warnings emitted, but content cannot be blocked or retracted. See [Cursor Limitation](../reference/cursor-hooks-api.md#cursor-limitation-no-response-blocking) for details.
 
 ## Module Map
 
@@ -39,12 +48,16 @@ flowchart TB
 | `src/airs-client.ts` | SDK wrapper with circuit breaker integration |
 | `src/scanner.ts` | Scan orchestration, DLP masking, UX block messages |
 | `src/code-extractor.ts` | Extract code blocks from AI responses |
+| `src/tool-name-parser.ts` | Parse MCP:server:tool format tool names |
+| `src/content-limits.ts` | Configurable skip/truncate thresholds before scanning |
 | `src/logger.ts` | Structured JSON Lines logging with rotation |
 | `src/circuit-breaker.ts` | Failure tracking, cooldown bypass, automatic recovery |
 | `src/dlp-masking.ts` | Per-service enforcement actions (block/mask/allow) |
 | `src/log-rotation.ts` | Log file rotation at 10MB threshold |
 | `src/types.ts` | TypeScript interfaces for config, Cursor API, AIRS |
-| `src/hooks/before-submit-prompt.ts` | Cursor `beforeSubmitPrompt` entry point |
+| `src/hooks/before-submit-prompt.ts` | Cursor `beforeSubmitPrompt` entry point (can block) |
+| `src/hooks/before-mcp-execution.ts` | Cursor `beforeMCPExecution` entry point (can block) |
+| `src/hooks/post-tool-use.ts` | Cursor `postToolUse` entry point (observe-only) |
 | `src/hooks/after-agent-response.ts` | Cursor `afterAgentResponse` entry point (observe-only) |
 
 ## Request Lifecycle
@@ -58,6 +71,29 @@ flowchart TB
 5. AIRS returns verdict + detections
 6. If `enforce` mode and verdict is `block`: output `{ "continue": false, "user_message": "..." }`
 7. If `observe` or verdict is `allow`: output `{ "continue": true }`
+
+### MCP Tool Scan (beforeMCPExecution — can block)
+
+1. Cursor pipes `{ tool_name, tool_input, ... }` as JSON to stdin
+2. Hook loads config, initializes logger
+3. Content limits check: if input exceeds `max_scan_bytes`, skip scan (fail-open)
+4. Scanner sends tool input to AIRS via `tool_event` content key using `profiles.tool`
+5. Circuit breaker gates the request (bypass if open)
+6. AIRS returns verdict + detections
+7. If `enforce` mode and verdict is `block`: output `{ "continue": false, "user_message": "..." }`
+8. If `observe` or verdict is `allow`: output `{ "continue": true }`
+
+### Tool Output Scan (postToolUse — observe-only)
+
+1. Cursor pipes `{ tool_name, tool_input, tool_output, ... }` as JSON to stdin (**after tool already executed**)
+2. Hook loads config, initializes logger, parses tool name
+3. Route by tool type:
+   - `MCP:*` → scan input+output as `tool_event`
+   - `Bash` → scan output as `response`
+   - `Write` / `Edit` → scan new content as `prompt` (DLP)
+   - Skip list → no scan
+4. Content limits applied: truncate or skip oversized content
+5. If violation detected: log to audit trail + emit warning (cannot block — observe-only)
 
 ### Response Scan (afterAgentResponse — observe-only)
 

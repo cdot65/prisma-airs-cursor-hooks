@@ -1,5 +1,31 @@
 # Release Notes
 
+## 0.2.0
+
+### Breaking Changes
+
+- **Environment variable rename**: All `AIRS_*` variables renamed to `PRISMA_AIRS_*`. See migration guide below.
+
+### New Features
+
+- **`beforeMCPExecution` hook** — scans MCP tool inputs before execution via AIRS `tool_event` content type. Can block tool calls flagged for prompt injection, malicious parameters, etc.
+- **`postToolUse` hook** — scans MCP, Shell, Write, and Edit tool outputs for DLP, malicious code, and other violations. Observe-only (audit and logging).
+- **Per-direction profiles** — new `profiles.tool` for MCP/tool scanning alongside existing `profiles.prompt` and `profiles.response`.
+- **Configurable content limits** — `content_limits.max_scan_bytes` (skip threshold, default 50KB) and `content_limits.truncate_bytes` (truncation, default 20KB) applied to all scan paths.
+
+### Migration
+
+Replace in your shell profile:
+- `AIRS_API_KEY` → `PRISMA_AIRS_API_KEY`
+- `AIRS_API_ENDPOINT` → `PRISMA_AIRS_API_ENDPOINT`
+- `AIRS_PROMPT_PROFILE` → `PRISMA_AIRS_PROMPT_PROFILE`
+- `AIRS_RESPONSE_PROFILE` → `PRISMA_AIRS_RESPONSE_PROFILE`
+- New: `PRISMA_AIRS_TOOL_PROFILE` (optional)
+
+Then reinstall hooks: `prisma-airs-hooks install --global`
+
+---
+
 ## 0.1.0 (2026-03-17)
 
 Initial release.

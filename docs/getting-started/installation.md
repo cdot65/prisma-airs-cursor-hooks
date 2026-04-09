@@ -31,14 +31,15 @@
 Add to your shell profile (`~/.zshrc`, `~/.bashrc`, or `~/.zsh.d/`):
 
 ```bash
-export AIRS_API_KEY=<your-x-pan-token>                         # required
-export AIRS_API_ENDPOINT=https://service.api.aisecurity.paloaltonetworks.com  # optional
-export AIRS_PROMPT_PROFILE=cursor-ide-prompt-profile            # optional
-export AIRS_RESPONSE_PROFILE=cursor-ide-response-profile        # optional
+export PRISMA_AIRS_API_KEY=<your-x-pan-token>                         # required
+export PRISMA_AIRS_API_ENDPOINT=https://service.api.aisecurity.paloaltonetworks.com  # optional
+export PRISMA_AIRS_PROMPT_PROFILE=cursor-ide-prompt-profile            # optional
+export PRISMA_AIRS_RESPONSE_PROFILE=cursor-ide-response-profile        # optional
+export PRISMA_AIRS_TOOL_PROFILE=cursor-ide-tool-profile                # optional
 ```
 
-!!! info "Only `AIRS_API_KEY` is required"
-    The endpoint defaults to the US region. Profile names default to `cursor-ide-prompt-profile` and `cursor-ide-response-profile`.
+!!! info "Only `PRISMA_AIRS_API_KEY` is required"
+    The endpoint defaults to the US region. Profile names default to `cursor-ide-prompt-profile`, `cursor-ide-response-profile`, and `cursor-ide-tool-profile`.
 
 ### Regional Endpoints
 

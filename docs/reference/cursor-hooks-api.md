@@ -25,6 +25,20 @@ Cursor reads hook configuration from multiple locations (all execute if present)
         "failClosed": false
       }
     ],
+    "beforeMCPExecution": [
+      {
+        "command": "node \"/path/to/dist/hooks/before-mcp-execution.js\"",
+        "timeout": 5000,
+        "failClosed": false
+      }
+    ],
+    "postToolUse": [
+      {
+        "command": "node \"/path/to/dist/hooks/post-tool-use.js\"",
+        "timeout": 5000,
+        "failClosed": false
+      }
+    ],
     "afterAgentResponse": [
       {
         "command": "node \"/path/to/dist/hooks/after-agent-response.js\"",
@@ -68,6 +82,25 @@ Additional fields:
 | `prompt` | `string` | The user's prompt text |
 | `attachments` | `array` | File attachments (if any) |
 
+### beforeMCPExecution
+
+Additional fields:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `tool_name` | `string` | MCP tool name (format: `MCP:server:tool`) |
+| `tool_input` | `object` | Tool input parameters |
+
+### postToolUse
+
+Additional fields:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `tool_name` | `string` | Tool name (e.g., `MCP:server:tool`, `Bash`, `Write`, `Edit`) |
+| `tool_input` | `object` | Tool input parameters |
+| `tool_output` | `string\|object` | Tool output/result |
+
 ### afterAgentResponse
 
 Additional fields:
@@ -95,6 +128,38 @@ To block:
 }
 ```
 
+### beforeMCPExecution
+
+Same contract as `beforeSubmitPrompt`:
+
+```json
+{
+  "continue": true
+}
+```
+
+To block:
+
+```json
+{
+  "continue": false,
+  "user_message": "MCP tool call blocked by AIRS: ..."
+}
+```
+
+### postToolUse (observe-only)
+
+Cursor ignores stdout and exit codes for this hook. We emit JSON for logging consistency, but it has no effect on tool output:
+
+```json
+{
+  "permission": "allow"
+}
+```
+
+!!! warning "Cannot block tool output"
+    `postToolUse` fires after the tool has already executed. Cursor does not support blocking or modifying tool output via this hook.
+
 ### afterAgentResponse (observe-only)
 
 Cursor ignores stdout and exit codes for this hook. We emit JSON for logging consistency, but it has no effect on what the user sees:
@@ -114,11 +179,13 @@ Cursor ignores stdout and exit codes for this hook. We emit JSON for logging con
 |------|------|---------|
 | 0 | All | Success |
 | 2 | `beforeSubmitPrompt` | Deny/block the prompt |
+| 2 | `beforeMCPExecution` | Deny/block the MCP tool call |
+| 2 | `postToolUse` | **No effect** (observe-only) |
 | 2 | `afterAgentResponse` | **No effect** (observe-only) |
 | Other | All | Hook error (fail-open if `failClosed: false`) |
 
 !!! warning "Different contracts per hook"
-    `beforeSubmitPrompt` uses `{ continue: false }` to block prompts. `afterAgentResponse` is observe-only and **cannot block responses** regardless of output.
+    `beforeSubmitPrompt` and `beforeMCPExecution` use `{ continue: false }` to block. `postToolUse` and `afterAgentResponse` are observe-only and **cannot block content** regardless of output.
 
 ## Cursor Limitation: No Response Blocking
 
