@@ -38,7 +38,7 @@ function main() {
   if (config.hooks.beforeSubmitPrompt) {
     const before = config.hooks.beforeSubmitPrompt.length;
     config.hooks.beforeSubmitPrompt = config.hooks.beforeSubmitPrompt.filter(
-      (h) => !h.command.includes("before-submit-prompt.ts"),
+      (h) => !h.command.includes("before-submit-prompt"),
     );
     removed += before - config.hooks.beforeSubmitPrompt.length;
     if (config.hooks.beforeSubmitPrompt.length === 0) {
@@ -49,11 +49,33 @@ function main() {
   if (config.hooks.afterAgentResponse) {
     const before = config.hooks.afterAgentResponse.length;
     config.hooks.afterAgentResponse = config.hooks.afterAgentResponse.filter(
-      (h) => !h.command.includes("after-agent-response.ts"),
+      (h) => !h.command.includes("after-agent-response"),
     );
     removed += before - config.hooks.afterAgentResponse.length;
     if (config.hooks.afterAgentResponse.length === 0) {
       delete config.hooks.afterAgentResponse;
+    }
+  }
+
+  if (config.hooks.beforeMCPExecution) {
+    const before = config.hooks.beforeMCPExecution.length;
+    config.hooks.beforeMCPExecution = config.hooks.beforeMCPExecution.filter(
+      (h) => !h.command.includes("before-mcp-execution"),
+    );
+    removed += before - config.hooks.beforeMCPExecution.length;
+    if (config.hooks.beforeMCPExecution.length === 0) {
+      delete config.hooks.beforeMCPExecution;
+    }
+  }
+
+  if (config.hooks.postToolUse) {
+    const before = config.hooks.postToolUse.length;
+    config.hooks.postToolUse = config.hooks.postToolUse.filter(
+      (h) => !h.command.includes("post-tool-use"),
+    );
+    removed += before - config.hooks.postToolUse.length;
+    if (config.hooks.postToolUse.length === 0) {
+      delete config.hooks.postToolUse;
     }
   }
 

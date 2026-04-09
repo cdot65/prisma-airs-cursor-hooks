@@ -39,20 +39,20 @@ function main() {
   console.log(`Installing Prisma AIRS Cursor hooks [${scope}]...\n`);
 
   // ---- Validate environment ----
-  const apiKey = process.env.AIRS_API_KEY;
-  const apiEndpoint = process.env.AIRS_API_ENDPOINT;
+  const apiKey = process.env.PRISMA_AIRS_API_KEY;
+  const apiEndpoint = process.env.PRISMA_AIRS_API_ENDPOINT;
 
   if (!apiKey) {
     console.warn(
-      "  WARNING: AIRS_API_KEY is not set in your environment.\n" +
+      "  WARNING: PRISMA_AIRS_API_KEY is not set in your environment.\n" +
         "  Hooks will fail-open until this variable is available.\n" +
-        "  Set it with:  export AIRS_API_KEY=<your-x-pan-token>\n",
+        "  Set it with:  export PRISMA_AIRS_API_KEY=<your-x-pan-token>\n",
     );
   }
   if (!apiEndpoint) {
     console.warn(
-      "  WARNING: AIRS_API_ENDPOINT is not set in your environment.\n" +
-        "  Set it with:  export AIRS_API_ENDPOINT=https://<region>.api.prismacloud.io\n",
+      "  WARNING: PRISMA_AIRS_API_ENDPOINT is not set in your environment.\n" +
+        "  Set it with:  export PRISMA_AIRS_API_ENDPOINT=https://<region>.api.prismacloud.io\n",
     );
   }
 
@@ -63,6 +63,8 @@ function main() {
   const distDir = join(PROJECT_ROOT, "dist", "hooks");
   const beforePromptCmd = `node "${join(distDir, "before-submit-prompt.js")}"`;
   const afterResponseCmd = `node "${join(distDir, "after-agent-response.js")}"`;
+  const beforeMCPCmd = `node "${join(distDir, "before-mcp-execution.js")}"`;
+  const postToolUseCmd = `node "${join(distDir, "post-tool-use.js")}"`;
 
   // Verify dist exists
   if (!existsSync(distDir)) {
@@ -114,6 +116,34 @@ function main() {
     });
   }
 
+  if (!hooksConfig.hooks.beforeMCPExecution) {
+    hooksConfig.hooks.beforeMCPExecution = [];
+  }
+  const hasMCPHook = hooksConfig.hooks.beforeMCPExecution.some(
+    (h) => h.command.includes("before-mcp-execution"),
+  );
+  if (!hasMCPHook) {
+    hooksConfig.hooks.beforeMCPExecution.push({
+      command: beforeMCPCmd,
+      timeout: 5000,
+      failClosed: false,
+    });
+  }
+
+  if (!hooksConfig.hooks.postToolUse) {
+    hooksConfig.hooks.postToolUse = [];
+  }
+  const hasPostToolHook = hooksConfig.hooks.postToolUse.some(
+    (h) => h.command.includes("post-tool-use"),
+  );
+  if (!hasPostToolHook) {
+    hooksConfig.hooks.postToolUse.push({
+      command: postToolUseCmd,
+      timeout: 5000,
+      failClosed: false,
+    });
+  }
+
   writeFileSync(HOOKS_JSON_PATH, JSON.stringify(hooksConfig, null, 2) + "\n", "utf-8");
   console.log(`  Wrote ${HOOKS_JSON_PATH}`);
 
@@ -138,12 +168,15 @@ function main() {
   }
   console.log("  Cursor will run these hooks automatically:");
   console.log("    beforeSubmitPrompt  → scans prompts via Prisma AIRS");
-  console.log("    afterAgentResponse  → scans AI responses (incl. code extraction)\n");
+  console.log("    afterAgentResponse  → scans AI responses (incl. code extraction)");
+  console.log("    beforeMCPExecution  → scans MCP tool inputs via Prisma AIRS (can block)");
+  console.log("    postToolUse         → scans tool outputs for audit (observe-only)\n");
   console.log("  Environment variables (set in your shell profile):");
-  console.log("    AIRS_API_KEY            — x-pan-token for AIRS API (required)");
-  console.log("    AIRS_API_ENDPOINT       — regional base URL (optional, defaults to US)");
-  console.log("    AIRS_PROMPT_PROFILE     — prompt security profile name (optional)");
-  console.log("    AIRS_RESPONSE_PROFILE   — response security profile name (optional)\n");
+  console.log("    PRISMA_AIRS_API_KEY            — x-pan-token for AIRS API (required)");
+  console.log("    PRISMA_AIRS_API_ENDPOINT       — regional base URL (optional, defaults to US)");
+  console.log("    PRISMA_AIRS_PROMPT_PROFILE     — prompt security profile name (optional)");
+  console.log("    PRISMA_AIRS_RESPONSE_PROFILE   — response security profile name (optional)");
+  console.log("    PRISMA_AIRS_TOOL_PROFILE       — tool security profile name (optional)\n");
   console.log("  Next steps:");
   console.log("    1. npm run validate-connection");
   console.log("    2. npm run validate-detection");

@@ -27,10 +27,16 @@ function main() {
     try {
       const config = JSON.parse(readFileSync(HOOKS_JSON, "utf-8"));
       const hasPromptHook = config.hooks?.beforeSubmitPrompt?.some(
-        (h: { command: string }) => h.command.includes("before-submit-prompt.ts"),
+        (h: { command: string }) => h.command.includes("before-submit-prompt"),
       );
       const hasResponseHook = config.hooks?.afterAgentResponse?.some(
-        (h: { command: string }) => h.command.includes("after-agent-response.ts"),
+        (h: { command: string }) => h.command.includes("after-agent-response"),
+      );
+      const hasMCPHook = config.hooks?.beforeMCPExecution?.some(
+        (h: { command: string }) => h.command.includes("before-mcp-execution"),
+      );
+      const hasPostToolHook = config.hooks?.postToolUse?.some(
+        (h: { command: string }) => h.command.includes("post-tool-use"),
       );
 
       if (hasPromptHook) {
@@ -44,6 +50,20 @@ function main() {
         console.log("  ✅ Registered: afterAgentResponse → AIRS response scan");
       } else {
         console.log("  ❌ MISSING:    afterAgentResponse hook entry");
+        issues++;
+      }
+
+      if (hasMCPHook) {
+        console.log("  ✅ Registered: beforeMCPExecution → AIRS MCP tool scan");
+      } else {
+        console.log("  ❌ MISSING:    beforeMCPExecution hook entry");
+        issues++;
+      }
+
+      if (hasPostToolHook) {
+        console.log("  ✅ Registered: postToolUse → AIRS tool output audit");
+      } else {
+        console.log("  ❌ MISSING:    postToolUse hook entry");
         issues++;
       }
     } catch {
@@ -61,15 +81,15 @@ function main() {
   }
 
   // Check env vars
-  if (process.env.AIRS_API_KEY) {
-    console.log("  ✅ Set:     AIRS_API_KEY");
+  if (process.env.PRISMA_AIRS_API_KEY) {
+    console.log("  ✅ Set:     PRISMA_AIRS_API_KEY");
   } else {
-    console.log("  ⚠️  NOT SET: AIRS_API_KEY (hooks will fail-open)");
+    console.log("  ⚠️  NOT SET: PRISMA_AIRS_API_KEY (hooks will fail-open)");
   }
-  if (process.env.AIRS_API_ENDPOINT) {
-    console.log("  ✅ Set:     AIRS_API_ENDPOINT");
+  if (process.env.PRISMA_AIRS_API_ENDPOINT) {
+    console.log("  ✅ Set:     PRISMA_AIRS_API_ENDPOINT");
   } else {
-    console.log("  ⚠️  NOT SET: AIRS_API_ENDPOINT");
+    console.log("  ⚠️  NOT SET: PRISMA_AIRS_API_ENDPOINT");
   }
 
   console.log("");
