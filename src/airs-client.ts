@@ -10,12 +10,10 @@ import { getApiKey } from "./config.js";
 import { CircuitBreaker } from "./circuit-breaker.js";
 import { Logger } from "./logger.js";
 
-const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
-
-/** Build a session ID from user email + day of week (e.g. "alice@co.com:Wed") */
+/** Build a session ID from user email + UTC date (e.g. "alice@co.com:2026-04-09") */
 function buildSessionId(appUser: string): string {
-  const day = DAYS[new Date().getUTCDay()];
-  return `${appUser}:${day}`;
+  const date = new Date().toISOString().slice(0, 10);
+  return `${appUser}:${date}`;
 }
 
 let initialized = false;
