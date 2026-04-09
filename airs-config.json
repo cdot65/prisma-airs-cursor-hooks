@@ -14,7 +14,7 @@
     "backoff_base_ms": 200
   },
   "logging": {
-    "path": ".cursor/hooks/airs-scan.log",
+    "path": "~/.cursor/hooks/airs-scan.log",
     "include_content": false
   },
   "enforcement": {

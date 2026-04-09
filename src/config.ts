@@ -121,6 +121,11 @@ export function loadConfig(configPath?: string): AirsConfig {
     ...config.content_limits,
   };
 
+  // Resolve ~ in log path to actual home directory
+  if (config.logging?.path) {
+    config.logging.path = config.logging.path.replace(/^~(?=\/|$)/, homedir());
+  }
+
   return config;
 }
 
