@@ -41,6 +41,12 @@ export interface CircuitBreakerConfig {
   cooldown_ms: number;
 }
 
+/** Content size limits for scanning */
+export interface ContentLimitsConfig {
+  max_scan_bytes: number;
+  truncate_bytes: number;
+}
+
 /** Top-level AIRS configuration (airs-config.json) */
 export interface AirsConfig {
   endpoint: string;
@@ -54,6 +60,8 @@ export interface AirsConfig {
   enforcement?: EnforcementConfig;
   /** Circuit breaker settings */
   circuit_breaker?: CircuitBreakerConfig;
+  /** Content size limits for scanning */
+  content_limits?: ContentLimitsConfig;
 }
 
 /** Scan direction */
