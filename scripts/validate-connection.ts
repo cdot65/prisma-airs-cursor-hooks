@@ -3,30 +3,18 @@
  * Sends a benign prompt to AIRS and prints the result.
  * Run: npx tsx scripts/validate-connection.ts
  */
-import { init, Scanner, Content } from "@cdot65/prisma-airs-sdk";
-import { loadConfig, getApiKey } from "../src/config.js";
+import { executeScan } from "../src/airs-client.js";
+import { loadConfig } from "../src/config.js";
 
 async function main() {
   console.log("Validating AIRS API connectivity...\n");
 
   const config = loadConfig();
-  init({
-    apiKey: getApiKey(config),
-    apiEndpoint: config.endpoint,
-  });
-
-  const scanner = new Scanner();
-  const content = new Content({
-    prompt: "Hello, can you help me write a function to sort an array?",
-  });
-
-  const start = Date.now();
-  const result = await scanner.syncScan(
-    { profile_name: config.profiles.prompt },
-    content,
-    { metadata: { app_name: "cursor-ide", app_user: "validation-script" } },
+  const { result, latencyMs } = await executeScan(
+    config,
+    { direction: "prompt", prompt: "Hello, can you help me write a function to sort an array?" },
+    "validation-script",
   );
-  const latencyMs = Date.now() - start;
 
   console.log(`Endpoint:  ${config.endpoint}`);
   console.log(`Profile:   ${config.profiles.prompt}`);

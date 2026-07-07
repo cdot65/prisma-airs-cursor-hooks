@@ -1,11 +1,6 @@
 import type { ScanResponse } from "@cdot65/prisma-airs-sdk";
 import type { AirsConfig, HookResult, ScanDirection, ScanLogEntry } from "./types.js";
-import {
-  scanPromptContent,
-  scanResponseContent,
-  scanToolEventContent,
-  AISecSDKException,
-} from "./airs-client.js";
+import { executeScan, AISecSDKException } from "./airs-client.js";
 import { parseToolName } from "./tool-name-parser.js";
 import { extractCode, joinCodeBlocks } from "./code-extractor.js";
 import { Logger } from "./logger.js";
@@ -233,7 +228,9 @@ export async function scanPrompt(
   const appUser = getAppUser();
 
   try {
-    const { result, latencyMs } = await scanPromptContent(config, prompt, appUser, logger);
+    const { result, latencyMs } = await executeScan(
+      config, { direction: "prompt", prompt }, appUser, logger,
+    );
 
     const verdict = result.action === "block" ? "block" : "allow";
     const { services: detections, findings } = extractDetections(result);
@@ -341,8 +338,8 @@ export async function scanResponse(
   const nlText = codeResponse ? extracted.naturalLanguage : responseText;
 
   try {
-    const { result, latencyMs } = await scanResponseContent(
-      config, nlText, codeResponse, appUser, logger,
+    const { result, latencyMs } = await executeScan(
+      config, { direction: "response", response: nlText, codeResponse }, appUser, logger,
     );
 
     const verdict = result.action === "block" ? "block" : "allow";
@@ -444,8 +441,17 @@ export async function scanToolEvent(
   const parsed = parseToolName(toolName);
 
   try {
-    const { result, latencyMs } = await scanToolEventContent(
-      config, parsed.server, parsed.tool, input, output, appUser, logger,
+    const { result, latencyMs } = await executeScan(
+      config,
+      {
+        direction: "tool",
+        serverName: parsed.server,
+        toolInvoked: parsed.tool,
+        input,
+        output,
+      },
+      appUser,
+      logger,
     );
 
     const verdict = result.action === "block" ? "block" : "allow";
