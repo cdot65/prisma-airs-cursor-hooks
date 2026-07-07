@@ -9,7 +9,7 @@ import {
 import { parseToolName } from "./tool-name-parser.js";
 import { extractCode, joinCodeBlocks } from "./code-extractor.js";
 import { Logger } from "./logger.js";
-import { getEnforcementAction, maskContent, DEFAULT_ENFORCEMENT } from "./dlp-masking.js";
+import { getEnforcementAction, DEFAULT_ENFORCEMENT } from "./dlp-masking.js";
 
 // ---------------------------------------------------------------------------
 // Human-readable detection labels for UX messages

@@ -63,7 +63,6 @@ src/config.ts      → test/config.test.ts
 ```
 src/                    TypeScript source
   hooks/                Hook entry points (stdin → scan → stdout)
-  adapters/             Multi-IDE adapter layer
 dist/                   Compiled JS (git-ignored)
 scripts/                CLI utilities (install, validate, stats)
 test/                   Vitest test suites
