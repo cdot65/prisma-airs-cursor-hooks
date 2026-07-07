@@ -82,13 +82,15 @@ AI response → afterAgentResponse hook → code extractor → AIRS Sync API (re
 | Module | Purpose |
 |---|---|
 | `src/config.ts` | Load/validate airs-config.json (project → global fallback) |
-| `src/airs-client.ts` | SDK wrapper with circuit breaker |
+| `src/airs-client.ts` | Single executeScan seam: SDK transport, circuit breaker, profile-by-direction |
 | `src/logger.ts` | Structured JSON Lines logging with rotation |
 | `src/types.ts` | TypeScript interfaces |
 | `src/hooks/before-submit-prompt.ts` | Cursor beforeSubmitPrompt entry point |
 | `src/hooks/before-mcp-execution.ts` | Cursor beforeMCPExecution entry point (can block) |
 | `src/hooks/post-tool-use.ts` | Cursor postToolUse entry point (observe-only) |
 | `src/hooks/after-agent-response.ts` | Cursor afterAgentResponse entry point (observe-only, cannot block) |
+| `src/hooks/run-hook.ts` | Shared hook harness (stdin/parse/config/logger/fail-open) |
+| `src/tool-routing.ts` | postToolUse routing: which scan a tool's input/output gets |
 | `src/code-extractor.ts` | Separates fenced/indented code blocks from natural language |
 | `src/scanner.ts` | Orchestrates prompt vs response scanning + DLP masking |
 | `src/tool-name-parser.ts` | Parse MCP:server:tool format |
@@ -104,7 +106,7 @@ AI response → afterAgentResponse hook → code extractor → AIRS Sync API (re
 - **Response scanning splits content**: natural language in `response` field, extracted code in `code_response` field
 - **Tool scanning uses `tool_event`**: MCP tool inputs/outputs sent as `tool_event` content type
 - **postToolUse routing by tool name**: MCP:* → tool_event, Bash → response, Write/Edit → prompt (DLP)
-- **Configurable content limits**: `content_limits.max_scan_bytes` (skip threshold, default 50KB), `content_limits.truncate_bytes` (truncation, default 20KB)
+- **Configurable content limits**: `content_limits.max_scan_bytes` (skip threshold, default 50KB), `content_limits.truncate_bytes` (truncation, default 20KB) — applied by the scanner to all directions (prompt, response, tool)
 - **Precompiled JS**: hooks use `node dist/` for ~800ms latency vs ~2.5s with tsx
 - **Circuit breaker**: after N consecutive failures, temporarily bypass with periodic retry
 

@@ -49,7 +49,7 @@ flowchart TB
 | `src/scanner.ts` | Scan orchestration, DLP masking, UX block messages |
 | `src/code-extractor.ts` | Extract code blocks from AI responses |
 | `src/tool-name-parser.ts` | Parse MCP:server:tool format tool names |
-| `src/content-limits.ts` | Configurable skip/truncate thresholds before scanning |
+| `src/content-limits.ts` | Configurable skip/truncate thresholds (applied by the scanner to all directions) |
 | `src/logger.ts` | Structured JSON Lines logging with rotation |
 | `src/circuit-breaker.ts` | Failure tracking, cooldown bypass, automatic recovery |
 | `src/dlp-masking.ts` | Per-service enforcement actions (block/mask/allow) |

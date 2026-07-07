@@ -57,7 +57,7 @@ MCP tool calls are scanned using the `tool_event` AIRS content type. This routes
 
 ## Configurable Content Limits
 
-Large inputs (multi-file reads, huge Bash outputs) can exceed what the AIRS API can meaningfully scan. Two thresholds are configurable in `content_limits`:
+Large content (multi-file reads, huge Bash outputs, giant prompts or responses) can exceed what the AIRS API can meaningfully scan. The scanner applies two configurable `content_limits` thresholds to every scan direction (prompt, response, and tool):
 
 - `max_scan_bytes` (default 50KB): inputs larger than this are **skipped** entirely (fail-open)
 - `truncate_bytes` (default 20KB): inputs between `truncate_bytes` and `max_scan_bytes` are **truncated** before scanning

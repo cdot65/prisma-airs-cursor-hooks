@@ -15,7 +15,6 @@
 import { runHook, respond } from "./run-hook.js";
 import { scanToolEvent } from "../scanner.js";
 import { normalize } from "../tool-routing.js";
-import { applyContentLimits, DEFAULT_CONTENT_LIMITS } from "../content-limits.js";
 import type { BeforeMCPExecutionInput, CursorHookOutput } from "../types.js";
 
 function allowThrough(message?: string): void {
@@ -37,21 +36,8 @@ void runHook<BeforeMCPExecutionInput>({
   handler: async (input, config, logger) => {
     const toolName = input.tool_name;
 
-    const inputStr = normalize(input.tool_input);
-    if (!inputStr.trim()) {
-      allowThrough();
-      return;
-    }
-
-    const limits = config.content_limits ?? DEFAULT_CONTENT_LIMITS;
-    const limited = applyContentLimits(inputStr, limits);
-    if (limited.skipped) {
-      logger.logEvent("scan_skipped_size_limit", { direction: "tool", tool: toolName });
-      allowThrough();
-      return;
-    }
-
-    const result = await scanToolEvent(config, toolName, limited.content, undefined, logger);
+    // Empty-content and size-limit handling live in the scanner
+    const result = await scanToolEvent(config, toolName, normalize(input.tool_input), undefined, logger);
 
     if (result.action === "block") {
       const output: CursorHookOutput = {

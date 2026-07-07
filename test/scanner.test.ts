@@ -115,6 +115,28 @@ describe("scanPrompt", () => {
     expect(result.action).toBe("pass");
   });
 
+  it("skips oversized prompts per content limits (fail-open)", async () => {
+    const config = { ...mockConfig, content_limits: { max_scan_bytes: 100, truncate_bytes: 50 } };
+    const result = await scanPrompt(config, "x".repeat(200), logger);
+    expect(result.action).toBe("pass");
+    expect(executeScan).not.toHaveBeenCalled();
+  });
+
+  it("truncates prompts between truncate and max limits", async () => {
+    vi.mocked(executeScan).mockResolvedValue({
+      result: allowScanResult as any,
+      latencyMs: 10,
+    });
+    const config = { ...mockConfig, content_limits: { max_scan_bytes: 100, truncate_bytes: 50 } };
+    await scanPrompt(config, "y".repeat(80), logger);
+    expect(executeScan).toHaveBeenCalledWith(
+      config,
+      { direction: "prompt", prompt: "y".repeat(50) },
+      expect.any(String),
+      expect.any(Logger),
+    );
+  });
+
   it("blocks in enforce mode even when no detection services are parsed", async () => {
     // AIRS can return action=block with an empty/missing *_detected map
     // (e.g. tool_event scans). The block verdict must still be honored.
@@ -270,6 +292,28 @@ describe("scanToolEvent", () => {
   it("passes in bypass mode without calling API", async () => {
     const config = { ...mockConfig, mode: "bypass" as const };
     const result = await scanToolEvent(config, "MCP:s:t", "input", undefined, logger);
+    expect(result.action).toBe("pass");
+    expect(executeScan).not.toHaveBeenCalled();
+  });
+
+  it("scans output alone when input exceeds content limits", async () => {
+    vi.mocked(executeScan).mockResolvedValue({
+      result: { action: "allow", scan_id: "s", report_id: "r", category: "benign" } as any,
+      latencyMs: 10,
+    });
+    const config = { ...mockConfig, content_limits: { max_scan_bytes: 100, truncate_bytes: 50 } };
+    await scanToolEvent(config, "MCP:s:t", "x".repeat(200), "small output", logger);
+    expect(executeScan).toHaveBeenCalledWith(
+      config,
+      { direction: "tool", serverName: "s", toolInvoked: "t", input: undefined, output: "small output" },
+      expect.any(String),
+      expect.any(Logger),
+    );
+  });
+
+  it("skips entirely when both input and output exceed limits", async () => {
+    const config = { ...mockConfig, content_limits: { max_scan_bytes: 100, truncate_bytes: 50 } };
+    const result = await scanToolEvent(config, "MCP:s:t", "x".repeat(200), "y".repeat(200), logger);
     expect(result.action).toBe("pass");
     expect(executeScan).not.toHaveBeenCalled();
   });

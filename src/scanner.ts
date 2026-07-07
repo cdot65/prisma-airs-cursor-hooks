@@ -5,6 +5,7 @@ import { parseToolName } from "./tool-name-parser.js";
 import { extractCode, joinCodeBlocks } from "./code-extractor.js";
 import { Logger } from "./logger.js";
 import { getEnforcementAction, DEFAULT_ENFORCEMENT } from "./dlp-masking.js";
+import { applyContentLimits, DEFAULT_CONTENT_LIMITS } from "./content-limits.js";
 
 // ---------------------------------------------------------------------------
 // Human-readable detection labels for UX messages
@@ -188,6 +189,26 @@ function bypassed(config: AirsConfig, direction: ScanDirection, logger: Logger):
 }
 
 /**
+ * Apply configured size limits to one piece of scan content.
+ * Returns the (possibly truncated) content, or null when the content
+ * exceeds max_scan_bytes and the scan must be skipped (fail-open).
+ */
+function limitContent(
+  config: AirsConfig,
+  direction: ScanDirection,
+  content: string,
+  logger: Logger,
+): string | null {
+  const limits = config.content_limits ?? DEFAULT_CONTENT_LIMITS;
+  const limited = applyContentLimits(content, limits);
+  if (limited.skipped) {
+    logger.logEvent("scan_skipped_size_limit", { direction });
+    return null;
+  }
+  return limited.content;
+}
+
+/**
  * Run one scan end-to-end: call AIRS, log the outcome, and translate the
  * verdict into a HookResult according to mode and per-service enforcement.
  * Fails open (pass) on any transport error.
@@ -298,7 +319,10 @@ export async function scanPrompt(
   if (bypassed(config, "prompt", logger)) return { action: "pass" };
   if (!prompt.trim()) return { action: "pass" };
 
-  return runScan(config, { direction: "prompt", prompt }, logger, buildPromptBlockMessage);
+  const limited = limitContent(config, "prompt", prompt, logger);
+  if (limited === null) return { action: "pass" };
+
+  return runScan(config, { direction: "prompt", prompt: limited }, logger, buildPromptBlockMessage);
 }
 
 /** Scan an AI response, splitting code from natural language (afterAgentResponse hook) */
@@ -309,6 +333,10 @@ export async function scanResponse(
 ): Promise<HookResult> {
   if (bypassed(config, "response", logger)) return { action: "pass" };
   if (!responseText.trim()) return { action: "pass" };
+
+  const limitedText = limitContent(config, "response", responseText, logger);
+  if (limitedText === null) return { action: "pass" };
+  responseText = limitedText;
 
   const extracted = extractCode(responseText);
   const codeResponse =
@@ -336,6 +364,13 @@ export async function scanToolEvent(
 ): Promise<HookResult> {
   if (bypassed(config, "tool", logger)) return { action: "pass" };
   if (!input?.trim() && !output?.trim()) return { action: "pass" };
+
+  // Limit input and output independently; skip only when nothing scannable remains
+  const limitedInput = input?.trim() ? limitContent(config, "tool", input, logger) : null;
+  const limitedOutput = output?.trim() ? limitContent(config, "tool", output, logger) : null;
+  if (limitedInput === null && limitedOutput === null) return { action: "pass" };
+  input = limitedInput ?? undefined;
+  output = limitedOutput ?? undefined;
 
   const parsed = parseToolName(toolName);
 

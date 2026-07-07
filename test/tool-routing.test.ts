@@ -51,9 +51,10 @@ describe("scanToolUse routing", () => {
     expect(scanPrompt).toHaveBeenCalledWith(config, "edited", logger);
   });
 
-  it("returns null for empty Write content", async () => {
-    expect(await scanToolUse(config, logger, "Write", { content: "  " }, undefined)).toBeNull();
-    expect(scanPrompt).not.toHaveBeenCalled();
+  it("delegates empty Write content to the scanner (which passes without scanning)", async () => {
+    const result = await scanToolUse(config, logger, "Write", { content: "  " }, undefined);
+    expect(scanPrompt).toHaveBeenCalledWith(config, "  ", logger);
+    expect(result).toEqual(PASS);
   });
 
   it("routes MCP tools to tool_event scan with input and output", async () => {
@@ -74,25 +75,6 @@ describe("scanToolUse routing", () => {
     expect(result).toEqual({ action: "block", message: "flagged" });
   });
 
-  it("skips oversized content per limits", async () => {
-    const big = "x".repeat(200); // > max_scan_bytes(100)
-    expect(await scanToolUse(config, logger, "Bash", {}, big)).toBeNull();
-    expect(scanResponse).not.toHaveBeenCalled();
-  });
-
-  it("scans MCP output alone when input exceeds limits", async () => {
-    const big = "x".repeat(200);
-    await scanToolUse(config, logger, "MCP:s:t", big, "small output");
-    expect(scanToolEvent).toHaveBeenCalledWith(
-      config, "MCP:s:t", undefined, "small output", logger,
-    );
-  });
-
-  it("truncates content between truncate and max limits", async () => {
-    const mid = "y".repeat(80); // between truncate(50) and max(100)
-    await scanToolUse(config, logger, "Bash", {}, mid);
-    expect(scanResponse).toHaveBeenCalledWith(config, "y".repeat(50), logger);
-  });
 });
 
 describe("normalize", () => {
