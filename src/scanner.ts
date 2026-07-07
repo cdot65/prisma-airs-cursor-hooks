@@ -22,6 +22,12 @@ function friendlyDetectionName(key: string): string {
   return DETECTION_LABELS[key] ?? key;
 }
 
+/** Comma-joined friendly names, with a fallback when AIRS reports no per-service detail */
+function detectionList(detections: string[]): string {
+  if (detections.length === 0) return "Security Policy";
+  return detections.map(friendlyDetectionName).join(", ");
+}
+
 // ---------------------------------------------------------------------------
 // Detection extraction from SDK ScanResponse
 // ---------------------------------------------------------------------------
@@ -119,9 +125,8 @@ interface BlockContext {
 }
 
 function buildPromptBlockMessage(ctx: BlockContext): string {
-  const detectionList = ctx.detections.map(friendlyDetectionName).join(", ");
   return buildBanner("Prisma AIRS — Prompt Blocked", [
-    `  What happened:  Your prompt was flagged by the ${detectionList} security check.`,
+    `  What happened:  Your prompt was flagged by the ${detectionList(ctx.detections)} security check.`,
     `  Category:       ${ctx.category}`,
     `  Profile:        ${ctx.profileName}`,
     "",
@@ -134,9 +139,8 @@ function buildPromptBlockMessage(ctx: BlockContext): string {
 }
 
 function buildResponseBlockMessage(ctx: BlockContext): string {
-  const detectionList = ctx.detections.map(friendlyDetectionName).join(", ");
   return buildBanner("Prisma AIRS — Response Flagged (observe-only)", [
-    `  What happened:  The AI response was flagged by the ${detectionList} security check.`,
+    `  What happened:  The AI response was flagged by the ${detectionList(ctx.detections)} security check.`,
     `  Category:       ${ctx.category}`,
     `  Profile:        ${ctx.profileName}`,
     "",
@@ -151,10 +155,9 @@ function buildResponseBlockMessage(ctx: BlockContext): string {
 }
 
 function buildToolBlockMessage(toolName: string, ctx: BlockContext): string {
-  const detectionList = ctx.detections.map(friendlyDetectionName).join(", ");
   return buildBanner("Prisma AIRS — MCP Tool Call Blocked", [
     `  Tool:       ${toolName}`,
-    `  What happened:  The tool input was flagged by the ${detectionList} security check.`,
+    `  What happened:  The tool input was flagged by the ${detectionList(ctx.detections)} security check.`,
     `  Category:       ${ctx.category}`,
     `  Profile:        ${ctx.profileName}`,
     "",
@@ -223,9 +226,12 @@ async function runScan(
     });
 
     if (config.mode === "enforce" && verdict === "block") {
-      // Check per-service enforcement — some services may be set to "mask" or "allow"
+      // Check per-service enforcement — some services may be set to "mask" or "allow".
+      // A block verdict with no parsed detection services (e.g. tool_event scans)
+      // must still block: per-service overrides can't apply to unknown services.
       const enforcement = config.enforcement ?? DEFAULT_ENFORCEMENT;
-      const enforcementAction = getEnforcementAction(findings, enforcement);
+      const enforcementAction =
+        findings.length > 0 ? getEnforcementAction(findings, enforcement) : "block";
 
       if (enforcementAction === "allow") {
         return { action: "pass" };

@@ -114,6 +114,25 @@ describe("scanPrompt", () => {
     const result = await scanPrompt(mockConfig, "test", logger);
     expect(result.action).toBe("pass");
   });
+
+  it("blocks in enforce mode even when no detection services are parsed", async () => {
+    // AIRS can return action=block with an empty/missing *_detected map
+    // (e.g. tool_event scans). The block verdict must still be honored.
+    vi.mocked(executeScan).mockResolvedValue({
+      result: {
+        action: "block",
+        scan_id: "scan-nodetect",
+        report_id: "report-nodetect",
+        category: "malicious",
+      } as any,
+      latencyMs: 100,
+    });
+
+    const config = { ...mockConfig, mode: "enforce" as const };
+    const result = await scanPrompt(config, "test prompt", logger);
+    expect(result.action).toBe("block");
+    expect(result.message).toContain("Security Policy");
+  });
 });
 
 describe("scanResponse", () => {
