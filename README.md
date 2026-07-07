@@ -243,19 +243,22 @@ This adds ~1.5s per hook invocation compared to compiled JS, so switch back to `
 ```
 src/                           TypeScript source
   hooks/
+    run-hook.ts                Shared hook harness (stdin/parse/config/fail-open)
     before-submit-prompt.ts    Cursor beforeSubmitPrompt entry point
+    before-mcp-execution.ts    Cursor beforeMCPExecution entry point
+    post-tool-use.ts           Cursor postToolUse entry point
     after-agent-response.ts    Cursor afterAgentResponse entry point
   cli.ts                       CLI entry point (prisma-airs-hooks command)
   config.ts                    Config loader (project → global fallback)
-  airs-client.ts               SDK wrapper with circuit breaker
-  scanner.ts                   Scan orchestration + DLP masking + UX messages
+  airs-client.ts               executeScan seam: SDK transport + circuit breaker
+  scanner.ts                   Scan orchestration, content limits, UX messages
+  tool-routing.ts              postToolUse routing (which scan per tool)
   code-extractor.ts            Separates code from natural language
   logger.ts                    JSON Lines logging with rotation
   circuit-breaker.ts           Failure tracking with cooldown bypass
   dlp-masking.ts               Per-service enforcement actions
   log-rotation.ts              Rotate logs at 10MB
   types.ts                     TypeScript interfaces
-  adapters/                    Multi-IDE adapter layer
 dist/                          Compiled JS (production hooks point here)
 scripts/
   install-hooks.ts             Write .cursor/hooks.json (points at dist/)
