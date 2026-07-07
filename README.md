@@ -25,7 +25,7 @@ All hooks use Cursor's native hooks.json system. They receive structured JSON on
 - **Node.js 18+** (native fetch, crypto.randomUUID)
 - **Cursor IDE** (with hooks support)
 - **Prisma AIRS API key** and regional endpoint URL
-- **AIRS security profiles** configured for prompt and response scanning
+- **AIRS security profile** configured in Strata Cloud Manager
 
 ## Install
 
@@ -41,13 +41,11 @@ Add to your shell profile (`~/.zshrc`, `~/.bashrc`, etc.):
 
 ```bash
 export PRISMA_AIRS_API_KEY=<your-x-pan-token>
+export PRISMA_AIRS_PROFILE_NAME="Cursor IDE - Hooks"                                 # recommended
 export PRISMA_AIRS_API_ENDPOINT=https://service.api.aisecurity.paloaltonetworks.com  # optional, defaults to US
-export PRISMA_AIRS_PROMPT_PROFILE=cursor-ide-prompt-profile      # optional
-export PRISMA_AIRS_RESPONSE_PROFILE=cursor-ide-response-profile  # optional
-export PRISMA_AIRS_TOOL_PROFILE=cursor-ide-tool-profile          # optional
 ```
 
-> **Note:** Cursor inherits your shell environment, so hooks automatically have access to these variables. Only `PRISMA_AIRS_API_KEY` is required — endpoint defaults to US and profile names default to `cursor-ide-prompt-profile` / `cursor-ide-response-profile` / `cursor-ide-tool-profile`.
+> **Note:** Cursor inherits your shell environment, so hooks automatically have access to these variables. Only `PRISMA_AIRS_API_KEY` is required — endpoint defaults to US and `PRISMA_AIRS_PROFILE_NAME` defaults to `Cursor IDE - Hooks`. For per-direction overrides, set `PRISMA_AIRS_PROMPT_PROFILE`, `PRISMA_AIRS_RESPONSE_PROFILE`, or `PRISMA_AIRS_TOOL_PROFILE`.
 
 Available regional endpoints:
 | Region | Endpoint |

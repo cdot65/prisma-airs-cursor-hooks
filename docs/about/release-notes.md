@@ -1,5 +1,15 @@
 # Release Notes
 
+## 0.2.2
+
+### Fixes
+
+- **`PRISMA_AIRS_PROFILE_NAME`** — single env var to set the AIRS security profile for all scan directions (prompt, response, tool). Per-direction vars (`PRISMA_AIRS_PROMPT_PROFILE`, `PRISMA_AIRS_RESPONSE_PROFILE`, `PRISMA_AIRS_TOOL_PROFILE`) still work as overrides.
+- **`session_id`** — all scans send `session_id` (`<email>:<YYYY-MM-DD>`) to Prisma AIRS, binding a user's prompts, responses, and tool calls into a single daily session.
+- **Log path** — `~` in `logging.path` is now resolved to the home directory at runtime. Default template changed to `~/.cursor/hooks/airs-scan.log`.
+
+---
+
 ## 0.2.0
 
 ### Breaking Changes
@@ -18,9 +28,7 @@
 Replace in your shell profile:
 - `AIRS_API_KEY` → `PRISMA_AIRS_API_KEY`
 - `AIRS_API_ENDPOINT` → `PRISMA_AIRS_API_ENDPOINT`
-- `AIRS_PROMPT_PROFILE` → `PRISMA_AIRS_PROMPT_PROFILE`
-- `AIRS_RESPONSE_PROFILE` → `PRISMA_AIRS_RESPONSE_PROFILE`
-- New: `PRISMA_AIRS_TOOL_PROFILE` (optional)
+- `AIRS_PROMPT_PROFILE` / `AIRS_RESPONSE_PROFILE` → `PRISMA_AIRS_PROFILE_NAME` (single var for all directions, or use per-direction `PRISMA_AIRS_PROMPT_PROFILE` / `PRISMA_AIRS_RESPONSE_PROFILE` / `PRISMA_AIRS_TOOL_PROFILE` overrides)
 
 Then reinstall hooks: `prisma-airs-hooks install --global`
 

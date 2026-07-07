@@ -5,7 +5,7 @@
 - **Node.js 18+** (native fetch, crypto.randomUUID)
 - **Cursor IDE** with hooks support
 - **Prisma AIRS API key** (`x-pan-token`)
-- **AIRS security profiles** configured for prompt and response scanning
+- **AIRS security profile** configured in Strata Cloud Manager
 
 ## Install
 
@@ -32,14 +32,12 @@ Add to your shell profile (`~/.zshrc`, `~/.bashrc`, or `~/.zsh.d/`):
 
 ```bash
 export PRISMA_AIRS_API_KEY=<your-x-pan-token>                         # required
+export PRISMA_AIRS_PROFILE_NAME="Cursor IDE - Hooks"                   # recommended
 export PRISMA_AIRS_API_ENDPOINT=https://service.api.aisecurity.paloaltonetworks.com  # optional
-export PRISMA_AIRS_PROMPT_PROFILE=cursor-ide-prompt-profile            # optional
-export PRISMA_AIRS_RESPONSE_PROFILE=cursor-ide-response-profile        # optional
-export PRISMA_AIRS_TOOL_PROFILE=cursor-ide-tool-profile                # optional
 ```
 
 !!! info "Only `PRISMA_AIRS_API_KEY` is required"
-    The endpoint defaults to the US region. Profile names default to `cursor-ide-prompt-profile`, `cursor-ide-response-profile`, and `cursor-ide-tool-profile`.
+    The endpoint defaults to the US region. `PRISMA_AIRS_PROFILE_NAME` sets the AIRS security profile for all scan directions. If you need different profiles per direction, use `PRISMA_AIRS_PROMPT_PROFILE`, `PRISMA_AIRS_RESPONSE_PROFILE`, and `PRISMA_AIRS_TOOL_PROFILE` as overrides.
 
 ### Regional Endpoints
 

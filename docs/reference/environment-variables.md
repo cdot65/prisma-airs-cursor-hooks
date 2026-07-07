@@ -10,10 +10,11 @@
 
 | Variable | Default | Description |
 |----------|---------|-------------|
+| `PRISMA_AIRS_PROFILE_NAME` | `Cursor IDE - Hooks` | AIRS security profile name for all scan directions |
 | `PRISMA_AIRS_API_ENDPOINT` | `https://service.api.aisecurity.paloaltonetworks.com` | Regional AIRS API base URL |
-| `PRISMA_AIRS_PROMPT_PROFILE` | `cursor-ide-prompt-profile` | Security profile name for prompt scanning |
-| `PRISMA_AIRS_RESPONSE_PROFILE` | `cursor-ide-response-profile` | Security profile name for response scanning |
-| `PRISMA_AIRS_TOOL_PROFILE` | `cursor-ide-tool-profile` | Security profile name for MCP/tool scanning |
+| `PRISMA_AIRS_PROMPT_PROFILE` | (inherits `PRISMA_AIRS_PROFILE_NAME`) | Override profile for prompt scanning |
+| `PRISMA_AIRS_RESPONSE_PROFILE` | (inherits `PRISMA_AIRS_PROFILE_NAME`) | Override profile for response scanning |
+| `PRISMA_AIRS_TOOL_PROFILE` | (inherits `PRISMA_AIRS_PROFILE_NAME`) | Override profile for MCP/tool scanning |
 
 ## Cursor-Provided
 
@@ -27,7 +28,7 @@ These are injected by Cursor when running hooks and used internally:
 
 ## User Identity Resolution
 
-Every AIRS scan includes a `metadata.app_user` field that identifies the developer. This appears as the `user_id` in AIRS scan logs and the Prisma Cloud console, enabling per-user audit trails and policy enforcement.
+Every AIRS scan includes a `metadata.app_user` field that identifies the developer. This appears as the `user_id` in AIRS scan logs and the Strata Cloud Manager console, enabling per-user audit trails and policy enforcement.
 
 The identity is resolved using the following fallback chain:
 
@@ -67,9 +68,7 @@ The resolved value is sent to AIRS as:
 ```bash
 # Add to ~/.zshrc or ~/.zsh.d/20-exports.zsh
 export PRISMA_AIRS_API_KEY="your-key-here"
-export PRISMA_AIRS_PROMPT_PROFILE="Cursor IDE - Hooks"
-export PRISMA_AIRS_RESPONSE_PROFILE="Cursor IDE - Hooks"
-export PRISMA_AIRS_TOOL_PROFILE="Cursor IDE - Hooks"
+export PRISMA_AIRS_PROFILE_NAME="Cursor IDE - Hooks"
 ```
 
 ### macOS / Linux (bash)

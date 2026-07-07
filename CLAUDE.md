@@ -120,7 +120,8 @@ AI response → afterAgentResponse hook → code extractor → AIRS Sync API (re
 
 Config lives at `.cursor/hooks/airs-config.json` or `~/.cursor/hooks/airs-config.json`. Environment variables:
 - `PRISMA_AIRS_API_KEY` — x-pan-token for AIRS API (required)
+- `PRISMA_AIRS_PROFILE_NAME` — AIRS security profile for all directions (recommended)
 - `PRISMA_AIRS_API_ENDPOINT` — regional API base URL (optional, defaults to US)
-- `PRISMA_AIRS_PROMPT_PROFILE` — prompt security profile name (optional)
-- `PRISMA_AIRS_RESPONSE_PROFILE` — response security profile name (optional)
-- `PRISMA_AIRS_TOOL_PROFILE` — tool/MCP security profile name (optional)
+- `PRISMA_AIRS_PROMPT_PROFILE` — override profile for prompt scanning (optional, falls back to `PRISMA_AIRS_PROFILE_NAME`)
+- `PRISMA_AIRS_RESPONSE_PROFILE` — override profile for response scanning (optional, falls back to `PRISMA_AIRS_PROFILE_NAME`)
+- `PRISMA_AIRS_TOOL_PROFILE` — override profile for tool/MCP scanning (optional, falls back to `PRISMA_AIRS_PROFILE_NAME`)

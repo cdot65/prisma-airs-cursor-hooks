@@ -19,13 +19,13 @@ Complete reference for `airs-config.json`.
 ### `profiles`
 
 - **Type:** `{ prompt: string, response: string, tool?: string }`
-- **Description:** AIRS security profile names for prompt, response, and tool scanning.
+- **Description:** AIRS security profile names for prompt, response, and tool scanning. All three default to `PRISMA_AIRS_PROFILE_NAME` (or `Cursor IDE - Hooks` if unset). Use per-direction env vars only when you need different profiles for different scan types.
 
-| Field | Env Var | Default |
+| Field | Env Var (override) | Fallback |
 |-------|---------|---------|
-| `profiles.prompt` | `PRISMA_AIRS_PROMPT_PROFILE` | `cursor-ide-prompt-profile` |
-| `profiles.response` | `PRISMA_AIRS_RESPONSE_PROFILE` | `cursor-ide-response-profile` |
-| `profiles.tool` | `PRISMA_AIRS_TOOL_PROFILE` | `cursor-ide-tool-profile` |
+| `profiles.prompt` | `PRISMA_AIRS_PROMPT_PROFILE` | `PRISMA_AIRS_PROFILE_NAME` → `Cursor IDE - Hooks` |
+| `profiles.response` | `PRISMA_AIRS_RESPONSE_PROFILE` | `PRISMA_AIRS_PROFILE_NAME` → `Cursor IDE - Hooks` |
+| `profiles.tool` | `PRISMA_AIRS_TOOL_PROFILE` | `PRISMA_AIRS_PROFILE_NAME` → `Cursor IDE - Hooks` |
 
 ### `mode`
 
@@ -58,14 +58,14 @@ Complete reference for `airs-config.json`.
 
 ```json
 {
-  "path": ".cursor/hooks/airs-scan.log",
+  "path": "~/.cursor/hooks/airs-scan.log",
   "include_content": false
 }
 ```
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `path` | `string` | Log file path (relative to working directory) |
+| `path` | `string` | Log file path (`~` resolved to home dir at runtime) |
 | `include_content` | `boolean` | Include prompt/response text in logs |
 
 ### `enforcement`

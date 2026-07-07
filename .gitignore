@@ -27,3 +27,4 @@ site/
 
 # Cursor hooks runtime
 .cursor/hooks/airs-scan.log
+.claude/

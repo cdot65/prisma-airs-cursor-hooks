@@ -26,7 +26,7 @@ Runtime configuration lives at `.cursor/hooks/airs-config.json` (project-level) 
     "backoff_base_ms": 200
   },
   "logging": {
-    "path": ".cursor/hooks/airs-scan.log",
+    "path": "~/.cursor/hooks/airs-scan.log",
     "include_content": false
   },
   "enforcement": {
@@ -70,12 +70,12 @@ When `mode` is `enforce`, each detection service can be configured independently
 
 Config values containing `${VAR_NAME}` are resolved from environment variables at load time. If the variable is unset, defaults apply:
 
-| Config Field | Env Var | Default |
+| Config Field | Env Var | Fallback |
 |-------------|---------|---------|
 | `endpoint` | `PRISMA_AIRS_API_ENDPOINT` | `https://service.api.aisecurity.paloaltonetworks.com` |
-| `profiles.prompt` | `PRISMA_AIRS_PROMPT_PROFILE` | `cursor-ide-prompt-profile` |
-| `profiles.response` | `PRISMA_AIRS_RESPONSE_PROFILE` | `cursor-ide-response-profile` |
-| `profiles.tool` | `PRISMA_AIRS_TOOL_PROFILE` | `cursor-ide-tool-profile` |
+| `profiles.prompt` | `PRISMA_AIRS_PROMPT_PROFILE` | `PRISMA_AIRS_PROFILE_NAME` → `Cursor IDE - Hooks` |
+| `profiles.response` | `PRISMA_AIRS_RESPONSE_PROFILE` | `PRISMA_AIRS_PROFILE_NAME` → `Cursor IDE - Hooks` |
+| `profiles.tool` | `PRISMA_AIRS_TOOL_PROFILE` | `PRISMA_AIRS_PROFILE_NAME` → `Cursor IDE - Hooks` |
 
 ## Logging
 
