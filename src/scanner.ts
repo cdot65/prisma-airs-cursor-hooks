@@ -1,6 +1,6 @@
+import type { AirsConfig, HookResult, ScanDirection } from "./types.js";
+import { executeScan, AISecSDKException, type ScanRequest } from "./airs-client.js";
 import type { ScanResponse } from "@cdot65/prisma-airs-sdk";
-import type { AirsConfig, HookResult, ScanDirection, ScanLogEntry } from "./types.js";
-import { executeScan, AISecSDKException } from "./airs-client.js";
 import { parseToolName } from "./tool-name-parser.js";
 import { extractCode, joinCodeBlocks } from "./code-extractor.js";
 import { Logger } from "./logger.js";
@@ -104,50 +104,41 @@ function getAppUser(): string {
 // Build UX-friendly block messages
 // ---------------------------------------------------------------------------
 
-function buildPromptBlockMessage(
-  detections: string[],
-  category: string,
-  profileName: string,
-  scanId: string,
-): string {
-  const detectionList = detections.map(friendlyDetectionName).join(", ");
-  return [
-    "",
-    "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
-    "  Prisma AIRS — Prompt Blocked",
-    "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
-    "",
+const BANNER_BAR = "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━";
+
+function buildBanner(title: string, body: string[]): string {
+  return ["", BANNER_BAR, `  ${title}`, BANNER_BAR, "", ...body, "", BANNER_BAR, ""].join("\n");
+}
+
+/** Context for a block message: what was flagged, by which profile, and how to follow up */
+interface BlockContext {
+  detections: string[];
+  category: string;
+  profileName: string;
+  scanId: string;
+}
+
+function buildPromptBlockMessage(ctx: BlockContext): string {
+  const detectionList = ctx.detections.map(friendlyDetectionName).join(", ");
+  return buildBanner("Prisma AIRS — Prompt Blocked", [
     `  What happened:  Your prompt was flagged by the ${detectionList} security check.`,
-    `  Category:       ${category}`,
-    `  Profile:        ${profileName}`,
+    `  Category:       ${ctx.category}`,
+    `  Profile:        ${ctx.profileName}`,
     "",
     "  What to do:",
     "    - Review your prompt for sensitive data, injection patterns, or policy violations.",
     "    - Modify the prompt and try again.",
     "    - If you believe this is a false positive, contact your security team",
-    `      and reference Scan ID: ${scanId}`,
-    "",
-    "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
-    "",
-  ].join("\n");
+    `      and reference Scan ID: ${ctx.scanId}`,
+  ]);
 }
 
-function buildResponseBlockMessage(
-  detections: string[],
-  category: string,
-  profileName: string,
-  scanId: string,
-): string {
-  const detectionList = detections.map(friendlyDetectionName).join(", ");
-  return [
-    "",
-    "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
-    "  Prisma AIRS — Response Flagged (observe-only)",
-    "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
-    "",
+function buildResponseBlockMessage(ctx: BlockContext): string {
+  const detectionList = ctx.detections.map(friendlyDetectionName).join(", ");
+  return buildBanner("Prisma AIRS — Response Flagged (observe-only)", [
     `  What happened:  The AI response was flagged by the ${detectionList} security check.`,
-    `  Category:       ${category}`,
-    `  Profile:        ${profileName}`,
+    `  Category:       ${ctx.category}`,
+    `  Profile:        ${ctx.profileName}`,
     "",
     "  Note: Cursor's afterAgentResponse hook is observe-only.",
     "  The response has already been displayed and cannot be retracted.",
@@ -155,82 +146,60 @@ function buildResponseBlockMessage(
     "  What to do:",
     "    - Do NOT use the flagged content (it may contain sensitive data or unsafe code).",
     "    - If you believe this is a false positive, contact your security team",
-    `      and reference Scan ID: ${scanId}`,
-    "",
-    "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
-    "",
-  ].join("\n");
+    `      and reference Scan ID: ${ctx.scanId}`,
+  ]);
 }
 
-function buildToolBlockMessage(
-  toolName: string,
-  detections: string[],
-  category: string,
-  profileName: string,
-  scanId: string,
-): string {
-  const detectionList = detections.map(friendlyDetectionName).join(", ");
-  return [
-    "",
-    "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
-    "  Prisma AIRS — MCP Tool Call Blocked",
-    "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
-    "",
+function buildToolBlockMessage(toolName: string, ctx: BlockContext): string {
+  const detectionList = ctx.detections.map(friendlyDetectionName).join(", ");
+  return buildBanner("Prisma AIRS — MCP Tool Call Blocked", [
     `  Tool:       ${toolName}`,
     `  What happened:  The tool input was flagged by the ${detectionList} security check.`,
-    `  Category:       ${category}`,
-    `  Profile:        ${profileName}`,
+    `  Category:       ${ctx.category}`,
+    `  Profile:        ${ctx.profileName}`,
     "",
     "  What to do:",
     "    - The tool input may contain injection patterns or malicious parameters.",
     "    - If you believe this is a false positive, contact your security team",
-    `      and reference Scan ID: ${scanId}`,
-    "",
-    "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
-    "",
-  ].join("\n");
+    `      and reference Scan ID: ${ctx.scanId}`,
+  ]);
 }
 
 function buildMaskedMessage(maskedServices: string[]): string {
   const names = maskedServices.map(friendlyDetectionName).join(", ");
-  return [
-    "",
-    "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
-    "  Prisma AIRS — Sensitive Data Masked",
-    "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
-    "",
+  return buildBanner("Prisma AIRS — Sensitive Data Masked", [
     `  ${names} detected sensitive data in your content.`,
     "  The flagged patterns have been masked with asterisks.",
-    "",
-    "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
-    "",
-  ].join("\n");
+  ]);
 }
 
 // ---------------------------------------------------------------------------
-// scanPrompt — called by beforeSubmitPrompt hook
+// Core scan flow — shared by all directions
 // ---------------------------------------------------------------------------
 
-export async function scanPrompt(
+/** True (and logged) when scanning is bypassed by config mode */
+function bypassed(config: AirsConfig, direction: ScanDirection, logger: Logger): boolean {
+  if (config.mode !== "bypass") return false;
+  logger.logEvent("scan_bypassed", { direction });
+  return true;
+}
+
+/**
+ * Run one scan end-to-end: call AIRS, log the outcome, and translate the
+ * verdict into a HookResult according to mode and per-service enforcement.
+ * Fails open (pass) on any transport error.
+ */
+async function runScan(
   config: AirsConfig,
-  prompt: string,
+  request: ScanRequest,
   logger: Logger,
+  blockMessage: (ctx: BlockContext) => string,
 ): Promise<HookResult> {
-  if (config.mode === "bypass") {
-    logger.logEvent("scan_bypassed", { direction: "prompt" });
-    return { action: "pass" };
-  }
-
-  if (!prompt.trim()) {
-    return { action: "pass" };
-  }
-
+  const direction = request.direction;
   const appUser = getAppUser();
 
   try {
-    const { result, latencyMs } = await executeScan(
-      config, { direction: "prompt", prompt }, appUser, logger,
-    );
+    const { result, latencyMs } = await executeScan(config, request, appUser, logger);
 
     const verdict = result.action === "block" ? "block" : "allow";
     const { services: detections, findings } = extractDetections(result);
@@ -245,8 +214,8 @@ export async function scanPrompt(
     logger.logScan({
       event: "scan_complete",
       scan_id: result.scan_id ?? "",
-      direction: "prompt" as ScanDirection,
-      verdict: verdict as "allow" | "block",
+      direction,
+      verdict,
       action_taken: actionTaken,
       latency_ms: latencyMs,
       detection_services_triggered: detections,
@@ -263,23 +232,23 @@ export async function scanPrompt(
       }
 
       if (enforcementAction === "mask") {
-        // DLP masking: we can't mask prompt content that's already been sent,
-        // but we log it and warn the user
+        // DLP masking: content already left the editor, so we can't rewrite it —
+        // log the event and warn the user instead
         const maskedServices = findings
           .filter((f) => (enforcement[f.detection_service] ?? "block") === "mask")
           .map((f) => f.detection_service);
-        logger.logEvent("dlp_mask_applied", { direction: "prompt", services: maskedServices });
+        logger.logEvent("dlp_mask_applied", { direction, services: maskedServices });
         return { action: "pass", message: buildMaskedMessage(maskedServices) };
       }
 
       return {
         action: "block",
-        message: buildPromptBlockMessage(
+        message: blockMessage({
           detections,
-          result.category ?? "policy violation",
-          config.profiles.prompt,
-          result.scan_id ?? "unknown",
-        ),
+          category: result.category ?? "policy violation",
+          profileName: config.profiles[direction],
+          scanId: result.scan_id ?? "unknown",
+        }),
       };
     }
 
@@ -290,12 +259,12 @@ export async function scanPrompt(
 
     const message = isAuth
       ? "AIRS authentication failed. Check your API key."
-      : "AIRS scan failed — allowing prompt (fail-open)";
+      : `AIRS scan failed — allowing ${direction === "tool" ? "tool event" : direction} (fail-open)`;
 
     logger.logScan({
       event: "scan_error",
       scan_id: "",
-      direction: "prompt",
+      direction,
       verdict: "allow",
       action_taken: "error",
       latency_ms: 0,
@@ -311,24 +280,30 @@ export async function scanPrompt(
 }
 
 // ---------------------------------------------------------------------------
-// scanResponse — called by afterAgentResponse hook
+// Public scan entry points — one per direction
 // ---------------------------------------------------------------------------
 
+/** Scan a developer prompt (beforeSubmitPrompt hook) */
+export async function scanPrompt(
+  config: AirsConfig,
+  prompt: string,
+  logger: Logger,
+): Promise<HookResult> {
+  if (bypassed(config, "prompt", logger)) return { action: "pass" };
+  if (!prompt.trim()) return { action: "pass" };
+
+  return runScan(config, { direction: "prompt", prompt }, logger, buildPromptBlockMessage);
+}
+
+/** Scan an AI response, splitting code from natural language (afterAgentResponse hook) */
 export async function scanResponse(
   config: AirsConfig,
   responseText: string,
   logger: Logger,
 ): Promise<HookResult> {
-  if (config.mode === "bypass") {
-    logger.logEvent("scan_bypassed", { direction: "response" });
-    return { action: "pass" };
-  }
+  if (bypassed(config, "response", logger)) return { action: "pass" };
+  if (!responseText.trim()) return { action: "pass" };
 
-  if (!responseText.trim()) {
-    return { action: "pass" };
-  }
-
-  const appUser = getAppUser();
   const extracted = extractCode(responseText);
   const codeResponse =
     extracted.codeBlocks.length > 0
@@ -337,90 +312,15 @@ export async function scanResponse(
 
   const nlText = codeResponse ? extracted.naturalLanguage : responseText;
 
-  try {
-    const { result, latencyMs } = await executeScan(
-      config, { direction: "response", response: nlText, codeResponse }, appUser, logger,
-    );
-
-    const verdict = result.action === "block" ? "block" : "allow";
-    const { services: detections, findings } = extractDetections(result);
-
-    const actionTaken =
-      config.mode === "observe"
-        ? "observed"
-        : verdict === "block"
-          ? "blocked"
-          : "allowed";
-
-    logger.logScan({
-      event: "scan_complete",
-      scan_id: result.scan_id ?? "",
-      direction: "response",
-      verdict: verdict as "allow" | "block",
-      action_taken: actionTaken,
-      latency_ms: latencyMs,
-      detection_services_triggered: detections,
-      error: null,
-    });
-
-    if (config.mode === "enforce" && verdict === "block") {
-      const enforcement = config.enforcement ?? DEFAULT_ENFORCEMENT;
-      const enforcementAction = getEnforcementAction(findings, enforcement);
-
-      if (enforcementAction === "allow") {
-        return { action: "pass" };
-      }
-
-      if (enforcementAction === "mask") {
-        const maskedServices = findings
-          .filter((f) => (enforcement[f.detection_service] ?? "block") === "mask")
-          .map((f) => f.detection_service);
-        logger.logEvent("dlp_mask_applied", { direction: "response", services: maskedServices });
-        return { action: "pass", message: buildMaskedMessage(maskedServices) };
-      }
-
-      return {
-        action: "block",
-        message: buildResponseBlockMessage(
-          detections,
-          result.category ?? "policy violation",
-          config.profiles.response,
-          result.scan_id ?? "unknown",
-        ),
-      };
-    }
-
-    return { action: "pass" };
-  } catch (err) {
-    const isAuth =
-      err instanceof AISecSDKException && err.message.includes("401");
-
-    const message = isAuth
-      ? "AIRS authentication failed. Check your API key."
-      : "AIRS scan failed — allowing response (fail-open)";
-
-    logger.logScan({
-      event: "scan_error",
-      scan_id: "",
-      direction: "response",
-      verdict: "allow",
-      action_taken: "error",
-      latency_ms: 0,
-      detection_services_triggered: [],
-      error: message,
-    });
-
-    if (isAuth) {
-      return { action: "pass", message: `Warning: ${message}` };
-    }
-    return { action: "pass" };
-  }
+  return runScan(
+    config,
+    { direction: "response", response: nlText, codeResponse },
+    logger,
+    buildResponseBlockMessage,
+  );
 }
 
-// ---------------------------------------------------------------------------
-// scanToolEvent — called by beforeMCPExecution and postToolUse hooks
-// ---------------------------------------------------------------------------
-
+/** Scan an MCP tool input/output (beforeMCPExecution and postToolUse hooks) */
 export async function scanToolEvent(
   config: AirsConfig,
   toolName: string,
@@ -428,104 +328,21 @@ export async function scanToolEvent(
   output: string | undefined,
   logger: Logger,
 ): Promise<HookResult> {
-  if (config.mode === "bypass") {
-    logger.logEvent("scan_bypassed", { direction: "tool" });
-    return { action: "pass" };
-  }
+  if (bypassed(config, "tool", logger)) return { action: "pass" };
+  if (!input?.trim() && !output?.trim()) return { action: "pass" };
 
-  if (!input?.trim() && !output?.trim()) {
-    return { action: "pass" };
-  }
-
-  const appUser = getAppUser();
   const parsed = parseToolName(toolName);
 
-  try {
-    const { result, latencyMs } = await executeScan(
-      config,
-      {
-        direction: "tool",
-        serverName: parsed.server,
-        toolInvoked: parsed.tool,
-        input,
-        output,
-      },
-      appUser,
-      logger,
-    );
-
-    const verdict = result.action === "block" ? "block" : "allow";
-    const { services: detections, findings } = extractDetections(result);
-
-    const actionTaken =
-      config.mode === "observe"
-        ? "observed"
-        : verdict === "block"
-          ? "blocked"
-          : "allowed";
-
-    logger.logScan({
-      event: "scan_complete",
-      scan_id: result.scan_id ?? "",
-      direction: "tool" as ScanDirection,
-      verdict: verdict as "allow" | "block",
-      action_taken: actionTaken,
-      latency_ms: latencyMs,
-      detection_services_triggered: detections,
-      error: null,
-    });
-
-    if (config.mode === "enforce" && verdict === "block") {
-      const enforcement = config.enforcement ?? DEFAULT_ENFORCEMENT;
-      const enforcementAction = getEnforcementAction(findings, enforcement);
-
-      if (enforcementAction === "allow") {
-        return { action: "pass" };
-      }
-
-      if (enforcementAction === "mask") {
-        const maskedServices = findings
-          .filter((f) => (enforcement[f.detection_service] ?? "block") === "mask")
-          .map((f) => f.detection_service);
-        logger.logEvent("dlp_mask_applied", { direction: "tool", services: maskedServices });
-        return { action: "pass", message: buildMaskedMessage(maskedServices) };
-      }
-
-      return {
-        action: "block",
-        message: buildToolBlockMessage(
-          toolName,
-          detections,
-          result.category ?? "policy violation",
-          config.profiles.tool,
-          result.scan_id ?? "unknown",
-        ),
-      };
-    }
-
-    return { action: "pass" };
-  } catch (err) {
-    const isAuth =
-      err instanceof AISecSDKException && err.message.includes("401");
-
-    const message = isAuth
-      ? "AIRS authentication failed. Check your API key."
-      : "AIRS scan failed — allowing tool event (fail-open)";
-
-    logger.logScan({
-      event: "scan_error",
-      scan_id: "",
+  return runScan(
+    config,
+    {
       direction: "tool",
-      verdict: "allow",
-      action_taken: "error",
-      latency_ms: 0,
-      detection_services_triggered: [],
-      error: message,
-    });
-
-    if (isAuth) {
-      return { action: "pass", message: `Warning: ${message}` };
-    }
-    return { action: "pass" };
-  }
+      serverName: parsed.server,
+      toolInvoked: parsed.tool,
+      input,
+      output,
+    },
+    logger,
+    (ctx) => buildToolBlockMessage(toolName, ctx),
+  );
 }
