@@ -40,9 +40,11 @@ export class Logger {
 
   private write(entry: object): void {
     try {
-      // Check for log rotation every 100 writes to avoid stat() overhead
+      // Check rotation on the first write (hook processes are short-lived and
+      // rarely write more than a few entries), then every 100 writes after
+      // to avoid stat() overhead in long-lived processes.
       this.writeCount++;
-      if (this.writeCount % 100 === 0) {
+      if (this.writeCount % 100 === 1) {
         rotateIfNeeded(this.logPath);
       }
 

@@ -19,27 +19,20 @@ const args = process.argv.slice(2);
 const command = args[0];
 const passthrough = args.slice(1).join(" ");
 
-const COMMANDS: Record<string, string> = {
-  install: "scripts/install-hooks.ts",
-  uninstall: "scripts/uninstall-hooks.ts",
-  verify: "scripts/verify-hooks.ts",
-  "validate-connection": "scripts/validate-connection.ts",
-  "validate-detection": "scripts/validate-detection.ts",
-  stats: "scripts/airs-stats.ts",
+const COMMANDS: Record<string, { script: string; usage: string; help: string }> = {
+  install: { script: "scripts/install-hooks.ts", usage: "install [--global]", help: "Install hooks into Cursor" },
+  uninstall: { script: "scripts/uninstall-hooks.ts", usage: "uninstall [--global]", help: "Remove hooks from Cursor" },
+  verify: { script: "scripts/verify-hooks.ts", usage: "verify", help: "Check hooks registration and env vars" },
+  "validate-connection": { script: "scripts/validate-connection.ts", usage: "validate-connection", help: "Test AIRS API connectivity" },
+  "validate-detection": { script: "scripts/validate-detection.ts", usage: "validate-detection", help: "Verify detection is working" },
+  stats: { script: "scripts/airs-stats.ts", usage: "stats [--since] [--json]", help: "Show scan statistics" },
 };
 
 function usage(): void {
-  console.log(`
-Prisma AIRS Cursor Hooks
-
-Usage:
-  prisma-airs-hooks install [--global]      Install hooks into Cursor
-  prisma-airs-hooks uninstall [--global]    Remove hooks from Cursor
-  prisma-airs-hooks verify                  Check hooks registration and env vars
-  prisma-airs-hooks validate-connection     Test AIRS API connectivity
-  prisma-airs-hooks validate-detection      Verify detection is working
-  prisma-airs-hooks stats [--since] [--json] Show scan statistics
-`.trim());
+  const lines = Object.values(COMMANDS).map(
+    (c) => `  prisma-airs-hooks ${c.usage.padEnd(27)}${c.help}`,
+  );
+  console.log(["Prisma AIRS Cursor Hooks", "", "Usage:", ...lines].join("\n"));
 }
 
 if (!command || command === "--help" || command === "-h") {
@@ -47,15 +40,15 @@ if (!command || command === "--help" || command === "-h") {
   process.exit(0);
 }
 
-const script = COMMANDS[command];
-if (!script) {
+const entry = COMMANDS[command];
+if (!entry) {
   console.error(`Unknown command: ${command}\n`);
   usage();
   process.exit(1);
 }
 
 try {
-  execSync(`npx tsx "${join(ROOT, script)}" ${passthrough}`, {
+  execSync(`npx tsx "${join(ROOT, entry.script)}" ${passthrough}`, {
     stdio: "inherit",
     cwd: ROOT,
     env: process.env,

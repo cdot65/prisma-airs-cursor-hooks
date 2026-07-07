@@ -1,3 +1,4 @@
+import { execSync } from "node:child_process";
 import type { AirsConfig, HookResult, ScanDirection } from "./types.js";
 import { executeScan, AISecSDKException, type ScanRequest } from "./airs-client.js";
 import type { ScanResponse } from "@cdot65/prisma-airs-sdk";
@@ -100,11 +101,12 @@ function getAppUser(): string {
   if (cursorEmail) return cursorEmail;
 
   try {
-    const { execSync } = require("node:child_process");
-    return execSync("git config user.email", { encoding: "utf-8" }).trim();
+    const email = execSync("git config user.email", { encoding: "utf-8" }).trim();
+    if (email) return email;
   } catch {
-    return process.env.USER ?? process.env.USERNAME ?? "unknown";
+    // no git or no configured email — fall through
   }
+  return process.env.USER ?? process.env.USERNAME ?? "unknown";
 }
 
 // ---------------------------------------------------------------------------
