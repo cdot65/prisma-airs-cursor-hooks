@@ -63,7 +63,8 @@ When working from a cloned repository:
 |---------|-------------|
 | `npm run install-hooks` | Install hooks to `.cursor/hooks.json` (project-level) |
 | `npm run install-hooks -- --global` | Install hooks to `~/.cursor/hooks.json` (all workspaces) |
-| `npm run uninstall-hooks` | Remove AIRS entries from project-level hooks.json |
+| `npm run install-hooks -- --optional <names\|all>` | Also register optional hooks (comma-separated names or `all`) |
+| `npm run uninstall-hooks` | Remove AIRS entries (core + optional) from project-level hooks.json |
 | `npm run uninstall-hooks -- --global` | Remove AIRS entries from global hooks.json |
 | `npm run verify-hooks` | Check project-level hooks registration, config, and env vars |
 | `npm run verify-hooks -- --global` | Check global (`~/.cursor`) hooks registration and config |

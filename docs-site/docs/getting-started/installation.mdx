@@ -103,6 +103,20 @@ npm run install-hooks -- --global
 
 This writes `hooks.json` pointing at the precompiled JS in `dist/` and copies `airs-config.json` to the hooks config directory.
 
+### Optional hooks
+
+The default install registers the four core hooks (`beforeSubmitPrompt`, `afterAgentResponse`, `beforeMCPExecution`, `postToolUse`). Additional hooks ship as **opt-in** — pass `--optional` with a comma-separated list of hook names, or `all`:
+
+```bash
+# everything
+prisma-airs-hooks install --global --optional all
+
+# just the ones you want
+prisma-airs-hooks install --global --optional beforeShellExecution,beforeReadFile
+```
+
+Optional hooks never fail `verify-hooks` when absent, and `uninstall-hooks` removes them along with the core hooks.
+
 :::tip[Global installation recommended]
 Use `--global` to install hooks at `~/.cursor/hooks.json` so they apply across all workspaces without per-project setup.
 :::
