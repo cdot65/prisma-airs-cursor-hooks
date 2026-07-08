@@ -63,6 +63,20 @@ export const HOOK_DEFS: HookDef[] = [
     optional: true,
     failClosed: false,
   },
+  {
+    event: "beforeReadFile",
+    slug: "before-read-file",
+    description: "scans file contents before Agent reads (can block)",
+    optional: true,
+    failClosed: false,
+  },
+  {
+    event: "beforeTabFileRead",
+    slug: "before-tab-file-read",
+    description: "scans file contents before Tab completions read (can block)",
+    optional: true,
+    failClosed: false,
+  },
 ];
 
 const DEFAULT_TIMEOUT = 5000;

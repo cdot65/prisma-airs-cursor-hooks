@@ -141,6 +141,21 @@ function buildPromptBlockMessage(ctx: BlockContext): string {
   ]);
 }
 
+function buildFileReadBlockMessage(filePath: string, ctx: BlockContext): string {
+  return buildBanner("Prisma AIRS — File Read Blocked", [
+    `  File:           ${filePath}`,
+    `  What happened:  The file contents were flagged by the ${detectionList(ctx.detections)} security check.`,
+    `  Category:       ${ctx.category}`,
+    `  Profile:        ${ctx.profileName}`,
+    "",
+    "  What to do:",
+    "    - The file may contain secrets, PII, or other sensitive data.",
+    "    - Remove or redact the sensitive content, or exclude the file from context.",
+    "    - If you believe this is a false positive, contact your security team",
+    `      and reference Scan ID: ${ctx.scanId}`,
+  ]);
+}
+
 function buildResponseBlockMessage(ctx: BlockContext): string {
   return buildBanner("Prisma AIRS — Response Flagged (observe-only)", [
     `  What happened:  The AI response was flagged by the ${detectionList(ctx.detections)} security check.`,
@@ -325,6 +340,27 @@ export async function scanPrompt(
   if (limited === null) return { action: "pass" };
 
   return runScan(config, { direction: "prompt", prompt: limited }, logger, buildPromptBlockMessage);
+}
+
+/** Scan file contents before they reach the model (beforeReadFile and beforeTabFileRead hooks) */
+export async function scanFileRead(
+  config: AirsConfig,
+  content: string,
+  filePath: string,
+  logger: Logger,
+): Promise<HookResult> {
+  if (bypassed(config, "prompt", logger)) return { action: "pass" };
+  if (!content.trim()) return { action: "pass" };
+
+  const limited = limitContent(config, "prompt", content, logger);
+  if (limited === null) return { action: "pass" };
+
+  return runScan(
+    config,
+    { direction: "prompt", prompt: limited },
+    logger,
+    (ctx) => buildFileReadBlockMessage(filePath, ctx),
+  );
 }
 
 /** Scan an AI response, splitting code from natural language (afterAgentResponse hook) */

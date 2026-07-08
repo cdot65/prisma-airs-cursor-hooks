@@ -144,6 +144,19 @@ export interface AfterShellExecutionInput extends CursorHookInput {
   sandbox?: boolean;
 }
 
+/** stdin for beforeReadFile hook */
+export interface BeforeReadFileInput extends CursorHookInput {
+  file_path: string;
+  content: string;
+  attachments?: unknown[];
+}
+
+/** stdin for beforeTabFileRead hook */
+export interface BeforeTabFileReadInput extends CursorHookInput {
+  file_path: string;
+  content: string;
+}
+
 /** stdin for postToolUse hook */
 export interface PostToolUseInput extends CursorHookInput {
   tool_name: string;
@@ -172,6 +185,23 @@ export interface CursorHookOutput {
   userMessage?: string;
   /** Message injected into the agent context (invisible to the user) */
   agentMessage?: string;
+}
+
+/**
+ * Cursor hook stdout JSON for beforeReadFile.
+ * Uses snake_case user_message per the Cursor hooks API.
+ */
+export interface BeforeReadFileOutput {
+  permission: "allow" | "deny";
+  user_message?: string;
+}
+
+/**
+ * Cursor hook stdout JSON for beforeTabFileRead.
+ * Permission only — Tab has no user-facing message channel.
+ */
+export interface BeforeTabFileReadOutput {
+  permission: "allow" | "deny";
 }
 
 /** Cursor hooks.json file format */
