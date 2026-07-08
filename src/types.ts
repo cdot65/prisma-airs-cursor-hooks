@@ -157,6 +157,18 @@ export interface BeforeTabFileReadInput extends CursorHookInput {
   content: string;
 }
 
+/** stdin for subagentStart hook */
+export interface SubagentStartInput extends CursorHookInput {
+  subagent_id?: string;
+  subagent_type?: string;
+  task: string;
+  parent_conversation_id?: string;
+  tool_call_id?: string;
+  subagent_model?: string;
+  is_parallel_worker?: boolean;
+  git_branch?: string;
+}
+
 /** stdin for postToolUse hook */
 export interface PostToolUseInput extends CursorHookInput {
   tool_name: string;
@@ -202,6 +214,15 @@ export interface BeforeReadFileOutput {
  */
 export interface BeforeTabFileReadOutput {
   permission: "allow" | "deny";
+}
+
+/**
+ * Cursor hook stdout JSON for subagentStart.
+ * "ask" is treated as deny by Cursor, so only allow/deny are emitted.
+ */
+export interface SubagentStartOutput {
+  permission: "allow" | "deny";
+  user_message?: string;
 }
 
 /** Cursor hooks.json file format */

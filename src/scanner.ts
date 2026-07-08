@@ -156,6 +156,20 @@ function buildFileReadBlockMessage(filePath: string, ctx: BlockContext): string 
   ]);
 }
 
+function buildSubagentBlockMessage(subagentType: string, ctx: BlockContext): string {
+  return buildBanner("Prisma AIRS — Subagent Blocked", [
+    `  Subagent:       ${subagentType}`,
+    `  What happened:  The subagent task was flagged by the ${detectionList(ctx.detections)} security check.`,
+    `  Category:       ${ctx.category}`,
+    `  Profile:        ${ctx.profileName}`,
+    "",
+    "  What to do:",
+    "    - The task text may contain injection patterns or policy violations.",
+    "    - If you believe this is a false positive, contact your security team",
+    `      and reference Scan ID: ${ctx.scanId}`,
+  ]);
+}
+
 function buildResponseBlockMessage(ctx: BlockContext): string {
   return buildBanner("Prisma AIRS — Response Flagged (observe-only)", [
     `  What happened:  The AI response was flagged by the ${detectionList(ctx.detections)} security check.`,
@@ -360,6 +374,27 @@ export async function scanFileRead(
     { direction: "prompt", prompt: limited },
     logger,
     (ctx) => buildFileReadBlockMessage(filePath, ctx),
+  );
+}
+
+/** Scan a subagent task description before the subagent spawns (subagentStart hook) */
+export async function scanSubagentTask(
+  config: AirsConfig,
+  task: string,
+  subagentType: string,
+  logger: Logger,
+): Promise<HookResult> {
+  if (bypassed(config, "prompt", logger)) return { action: "pass" };
+  if (!task.trim()) return { action: "pass" };
+
+  const limited = limitContent(config, "prompt", task, logger);
+  if (limited === null) return { action: "pass" };
+
+  return runScan(
+    config,
+    { direction: "prompt", prompt: limited },
+    logger,
+    (ctx) => buildSubagentBlockMessage(subagentType, ctx),
   );
 }
 
