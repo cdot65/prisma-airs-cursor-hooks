@@ -26,6 +26,7 @@ prisma-airs-hooks install --global --optional beforeShellExecution,afterShellExe
 | `afterShellExecution` | No (observe) | Terminal output after the command runs | `response` (response profile) |
 | `beforeReadFile` | **Yes** | File contents before the Agent reads them | `prompt` (prompt profile, DLP) |
 | `beforeTabFileRead` | **Yes** | File contents before Tab completions read them | `prompt` (prompt profile, DLP) |
+| `subagentStart` | **Yes** | Subagent task text before the subagent spawns | `prompt` (prompt profile) |
 
 ## Shell command scanning (beforeShellExecution)
 
@@ -53,6 +54,10 @@ Both hooks receive the **full file contents** on stdin before those contents rea
 - `beforeTabFileRead` fires for Tab inline completions and returns `{ permission }` only (Tab has no message channel).
 
 Files larger than `content_limits.max_scan_bytes` (default 50 KB) skip scanning and are allowed through (fail-open, logged).
+
+## Subagent task scanning (subagentStart)
+
+Fires before a subagent (Task tool) spawns. The task description can carry prompt injection — text a compromised context planted for a fresh agent with fewer guardrails. The task is scanned like a prompt; in `enforce` mode a block verdict denies the spawn with a `user_message` naming the subagent type and scan ID. Cursor treats `"ask"` as deny for this hook, so the hook only ever emits `allow` or `deny`.
 
 :::warning Latency
 Each scan adds ~800 ms. Tab completions read files frequently — enable `beforeTabFileRead` only when DLP requirements justify the latency. This is why both hooks ship as opt-in.

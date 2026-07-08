@@ -71,6 +71,13 @@ export const HOOK_DEFS: HookDef[] = [
     failClosed: false,
   },
   {
+    event: "subagentStart",
+    slug: "subagent-start",
+    description: "scans subagent task text for injection (can block)",
+    optional: true,
+    failClosed: false,
+  },
+  {
     event: "beforeTabFileRead",
     slug: "before-tab-file-read",
     description: "scans file contents before Tab completions read (can block)",
