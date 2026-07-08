@@ -68,6 +68,19 @@ Fires after an MCP tool executes, receiving the tool input and the **full result
 The core `postToolUse` hook also scans MCP tool results. If both are installed, MCP results are scanned twice — pick one surface for MCP auditing.
 :::
 
+## MCP output sanitization (postToolUse)
+
+Not a separate hook — an opt-in **config flag** (`sanitize_mcp_output: true`) that upgrades the core `postToolUse` hook for MCP tools. Cursor honors `updated_mcp_tool_output` from postToolUse: when a scan blocks MCP output in `enforce` mode, the hook replaces the output the model sees with a structured redaction notice:
+
+```json
+{
+  "updated_mcp_tool_output": { "airs_sanitized": true, "message": "Prisma AIRS — …" },
+  "additional_context": "Prisma AIRS sanitized the output of MCP:server:tool …"
+}
+```
+
+This keeps injected instructions or leaked secrets in MCP results out of model context. AIRS doesn't return surgically masked content for `tool_event` scans, so the whole output is replaced, not partially masked. Non-MCP tools (Bash, Write) stay observe-only — Cursor doesn't support output replacement for them.
+
 :::warning Latency
 Each scan adds ~800 ms. Tab completions read files frequently — enable `beforeTabFileRead` only when DLP requirements justify the latency. This is why both hooks ship as opt-in.
 :::
