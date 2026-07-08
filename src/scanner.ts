@@ -156,6 +156,20 @@ function buildFileReadBlockMessage(filePath: string, ctx: BlockContext): string 
   ]);
 }
 
+function buildShellBlockMessage(ctx: BlockContext): string {
+  return buildBanner("Prisma AIRS — Shell Command Blocked", [
+    `  What happened:  The shell command was flagged by the ${detectionList(ctx.detections)} security check.`,
+    `  Category:       ${ctx.category}`,
+    `  Profile:        ${ctx.profileName}`,
+    "",
+    "  What to do:",
+    "    - The command may contain malicious patterns, remote-script execution, or exfiltration.",
+    "    - Review the command and modify it if legitimate.",
+    "    - If you believe this is a false positive, contact your security team",
+    `      and reference Scan ID: ${ctx.scanId}`,
+  ]);
+}
+
 function buildSubagentBlockMessage(subagentType: string, ctx: BlockContext): string {
   return buildBanner("Prisma AIRS — Subagent Blocked", [
     `  Subagent:       ${subagentType}`,
@@ -374,6 +388,26 @@ export async function scanFileRead(
     { direction: "prompt", prompt: limited },
     logger,
     (ctx) => buildFileReadBlockMessage(filePath, ctx),
+  );
+}
+
+/** Scan a shell command before execution (beforeShellExecution hook) */
+export async function scanShellCommand(
+  config: AirsConfig,
+  command: string,
+  logger: Logger,
+): Promise<HookResult> {
+  if (bypassed(config, "tool", logger)) return { action: "pass" };
+  if (!command.trim()) return { action: "pass" };
+
+  const limited = limitContent(config, "tool", command, logger);
+  if (limited === null) return { action: "pass" };
+
+  return runScan(
+    config,
+    { direction: "tool", serverName: "cursor", toolInvoked: "Shell", input: limited },
+    logger,
+    buildShellBlockMessage,
   );
 }
 

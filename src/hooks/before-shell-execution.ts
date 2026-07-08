@@ -13,7 +13,7 @@
  *   stderr → debug logs (visible in Cursor "Hooks" output panel)
  */
 import { runHook, respond } from "./run-hook.js";
-import { scanToolEvent } from "../scanner.js";
+import { scanShellCommand } from "../scanner.js";
 import type { BeforeShellExecutionInput, CursorHookOutput } from "../types.js";
 
 function allowThrough(message?: string): void {
@@ -28,7 +28,7 @@ void runHook<BeforeShellExecutionInput>({
   skip: (input) => !input.command?.trim(),
   handler: async (input, config, logger) => {
     // Empty-content and size-limit handling live in the scanner
-    const result = await scanToolEvent(config, "Shell", input.command, undefined, logger);
+    const result = await scanShellCommand(config, input.command, logger);
 
     if (result.action === "block") {
       const output: CursorHookOutput = {
