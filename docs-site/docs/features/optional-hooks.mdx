@@ -24,6 +24,8 @@ prisma-airs-hooks install --global --optional beforeShellExecution,afterShellExe
 |------|-----------|-------|-------------------|
 | `beforeShellExecution` | **Yes** | Shell command text before it runs | `tool_event` (tool profile) |
 | `afterShellExecution` | No (observe) | Terminal output after the command runs | `response` (response profile) |
+| `beforeReadFile` | **Yes** | File contents before the Agent reads them | `prompt` (prompt profile, DLP) |
+| `beforeTabFileRead` | **Yes** | File contents before Tab completions read them | `prompt` (prompt profile, DLP) |
 
 ## Shell command scanning (beforeShellExecution)
 
@@ -43,6 +45,19 @@ Typical catches: piped remote-script execution (`curl … | sh`), exfiltration p
 
 Fires after a shell command completes. The captured terminal output is scanned as a `response` (DLP focus: leaked credentials, environment dumps, tokens in logs). Observe-only — the command has already run; violations are logged to the scan log and warned in Cursor's Hooks output panel.
 
+## File-read DLP gate (beforeReadFile / beforeTabFileRead)
+
+Both hooks receive the **full file contents** on stdin before those contents reach the model. The content is scanned through the prompt profile (DLP focus); in `enforce` mode a block verdict denies the read, so secrets and PII never enter model context.
+
+- `beforeReadFile` fires for Agent reads and returns `{ permission, user_message? }` — the deny message names the file and scan ID.
+- `beforeTabFileRead` fires for Tab inline completions and returns `{ permission }` only (Tab has no message channel).
+
+Files larger than `content_limits.max_scan_bytes` (default 50 KB) skip scanning and are allowed through (fail-open, logged).
+
+:::warning Latency
+Each scan adds ~800 ms. Tab completions read files frequently — enable `beforeTabFileRead` only when DLP requirements justify the latency. This is why both hooks ship as opt-in.
+:::
+
 :::note Cloud agents
-`beforeShellExecution` and `afterShellExecution` both run in Cursor cloud agents (unlike `beforeSubmitPrompt` / `beforeMCPExecution` / `afterAgentResponse`), so enabling them extends AIRS coverage to cloud agent sessions.
+`beforeShellExecution`, `afterShellExecution`, and `beforeReadFile` all run in Cursor cloud agents (unlike `beforeSubmitPrompt` / `beforeMCPExecution` / `afterAgentResponse`), so enabling them extends AIRS coverage to cloud agent sessions. `beforeTabFileRead` is IDE-only — Tab doesn't run in the cloud.
 :::
