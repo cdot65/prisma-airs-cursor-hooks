@@ -29,3 +29,4 @@ docs-site/.docusaurus/
 # Cursor hooks runtime
 .cursor/hooks/airs-scan.log
 .claude/
+cursor-hooks.md

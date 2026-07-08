@@ -80,6 +80,14 @@ function main() {
     if (config.logging.include_content) {
       warn("logging.include_content=true — scanned content (possibly sensitive) is written to the log");
     }
+    if (config.sanitize_mcp_output) {
+      ok("MCP output sanitization: enabled (flagged MCP tool output is replaced in enforce mode)");
+      if (config.mode !== "enforce") {
+        warn("sanitize_mcp_output=true has no effect outside enforce mode");
+      }
+    } else {
+      ok("MCP output sanitization: disabled (postToolUse is observe-only)");
+    }
   } catch (err) {
     fail(`loadConfig failed: ${err instanceof Error ? err.message : err}`);
   }
