@@ -176,7 +176,8 @@ describe("before-shell-execution — enforce mode against mock AIRS", () => {
       cwd: "/project",
     });
     expect(output.permission).toBe("deny");
-    expect(output.userMessage).toBeTruthy();
+    expect(output.userMessage).toContain("Shell Command Blocked");
+    expect(output.userMessage).not.toContain("MCP");
     expect(output.agentMessage).toBeTruthy();
     expect(exitCode).toBe(2);
   });
