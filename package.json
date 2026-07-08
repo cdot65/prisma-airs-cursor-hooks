@@ -49,6 +49,10 @@
     "uninstall-hooks": "tsx scripts/uninstall-hooks.ts",
     "verify-hooks": "tsx scripts/verify-hooks.ts",
     "stats": "tsx scripts/airs-stats.ts",
+    "logs": "tsx scripts/airs-logs.ts",
+    "rotate-log": "tsx scripts/rotate-log.ts",
+    "validate-config": "tsx scripts/validate-config.ts",
+    "doctor": "tsx scripts/doctor.ts",
     "docs:serve": "mkdocs serve",
     "docs:build": "mkdocs build"
   },

@@ -26,6 +26,10 @@ const COMMANDS: Record<string, { script: string; usage: string; help: string }> 
   "validate-connection": { script: "scripts/validate-connection.ts", usage: "validate-connection", help: "Test AIRS API connectivity" },
   "validate-detection": { script: "scripts/validate-detection.ts", usage: "validate-detection", help: "Verify detection is working" },
   stats: { script: "scripts/airs-stats.ts", usage: "stats [--since] [--json]", help: "Show scan statistics" },
+  logs: { script: "scripts/airs-logs.ts", usage: "logs [--n 10] [--json]", help: "Show recent scan log entries" },
+  "rotate-log": { script: "scripts/rotate-log.ts", usage: "rotate-log", help: "Rotate the scan log now" },
+  "validate-config": { script: "scripts/validate-config.ts", usage: "validate-config", help: "Validate the AIRS configuration" },
+  doctor: { script: "scripts/doctor.ts", usage: "doctor", help: "Diagnose and repair the installation" },
 };
 
 function usage(): void {

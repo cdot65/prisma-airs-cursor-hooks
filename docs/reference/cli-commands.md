@@ -12,6 +12,10 @@ After installing globally with `npm install -g @cdot65/prisma-airs-cursor-hooks`
 | `prisma-airs-hooks validate-connection` | Test AIRS API connectivity with your credentials |
 | `prisma-airs-hooks validate-detection` | Send a test prompt injection and verify detection |
 | `prisma-airs-hooks stats [--since <duration>] [--json]` | Show scan statistics |
+| `prisma-airs-hooks logs [--n 10] [--json]` | Show the most recent scan log entries |
+| `prisma-airs-hooks rotate-log` | Rotate the scan log immediately |
+| `prisma-airs-hooks validate-config` | Validate the AIRS configuration (no API calls) |
+| `prisma-airs-hooks doctor` | Diagnose the installation and apply safe repairs |
 
 ### Examples
 
@@ -24,6 +28,13 @@ prisma-airs-hooks verify
 
 # Stats for the last 7 days as JSON
 prisma-airs-hooks stats --since 7d --json
+
+# Review the last 20 scan log entries
+prisma-airs-hooks logs --n 20
+
+# Validate config and repair problems
+prisma-airs-hooks validate-config
+prisma-airs-hooks doctor
 
 # Remove hooks
 prisma-airs-hooks uninstall --global

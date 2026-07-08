@@ -30,8 +30,9 @@ function isValidUrl(url: string): boolean {
  *   3. .cursor/hooks/airs-config.json in cwd
  *   4. ~/.cursor/hooks/airs-config.json (global/user-level)
  *   5. airs-config.json in cwd (project root fallback)
+ * Returns the first candidate when none exist (used as the create target).
  */
-function resolveConfigPath(configPath?: string): string {
+export function resolveConfigPath(configPath?: string): string {
   if (configPath) return configPath;
 
   const candidates: string[] = [];

@@ -162,6 +162,10 @@ After `failure_threshold` consecutive AIRS API failures, scanning is temporarily
 | `prisma-airs-hooks validate-connection` | Test AIRS API connectivity |
 | `prisma-airs-hooks validate-detection` | Verify prompt injection detection |
 | `prisma-airs-hooks stats [--since 7d] [--json]` | Show scan statistics |
+| `prisma-airs-hooks logs [--n 10] [--json]` | Show recent scan log entries |
+| `prisma-airs-hooks rotate-log` | Rotate the scan log now |
+| `prisma-airs-hooks validate-config` | Validate the AIRS configuration |
+| `prisma-airs-hooks doctor` | Diagnose and repair the installation |
 
 ## Uninstall
 
@@ -225,6 +229,10 @@ npm run build
 | `npm run uninstall-hooks -- --global` | Remove AIRS entries from global hooks.json |
 | `npm run verify-hooks` | Check hooks are installed and env vars set |
 | `npm run stats` | Show scan statistics from log file |
+| `npm run logs` | Show recent scan log entries |
+| `npm run rotate-log` | Rotate the scan log now |
+| `npm run validate-config` | Validate the AIRS configuration |
+| `npm run doctor` | Diagnose and repair the installation |
 
 ### Development mode
 
