@@ -53,8 +53,8 @@
     "rotate-log": "tsx scripts/rotate-log.ts",
     "validate-config": "tsx scripts/validate-config.ts",
     "doctor": "tsx scripts/doctor.ts",
-    "docs:serve": "mkdocs serve",
-    "docs:build": "mkdocs build"
+    "docs:serve": "npm --prefix docs-site start",
+    "docs:build": "npm --prefix docs-site run build"
   },
   "dependencies": {
     "@cdot65/prisma-airs-sdk": "^0.6.7",

@@ -15,7 +15,7 @@ Published as `@cdot65/prisma-airs-cursor-hooks` on npm.
 - **Build:** tsc with tsconfig.build.json → dist/
 - **Test framework:** vitest (66 tests, 9 suites)
 - **Package manager:** npm
-- **Docs:** MkDocs Material
+- **Docs:** Docusaurus (`docs-site/`)
 - **CI:** GitHub Actions (typecheck, build, test, docs-build)
 - **Publish:** npm OIDC via GitHub Actions on release
 

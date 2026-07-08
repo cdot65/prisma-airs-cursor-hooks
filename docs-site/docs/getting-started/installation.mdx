@@ -1,0 +1,152 @@
+---
+id: installation
+title: Installation
+sidebar_position: 1
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+## Prerequisites
+
+- **Node.js 18+** (native fetch, crypto.randomUUID)
+- **Cursor IDE** with hooks support
+- **Prisma AIRS API key** (`x-pan-token`)
+- **AIRS security profile** configured in Strata Cloud Manager
+
+## Install
+
+<Tabs>
+  <TabItem value="npm" label="npm (recommended)" default>
+
+```bash
+npm install -g @cdot65/prisma-airs-cursor-hooks
+```
+
+This installs the CLI globally and makes the `prisma-airs-hooks` command available system-wide.
+
+  </TabItem>
+  <TabItem value="source" label="From source">
+
+```bash
+git clone https://github.com/cdot65/prisma-airs-cursor-hooks.git
+cd prisma-airs-cursor-hooks
+npm install
+npm run build
+```
+
+  </TabItem>
+</Tabs>
+
+## Environment Variables
+
+Add to your shell profile (`~/.zshrc`, `~/.bashrc`, or `~/.zsh.d/`):
+
+```bash
+export PRISMA_AIRS_API_KEY=<your-x-pan-token>                         # required
+export PRISMA_AIRS_PROFILE_NAME="Cursor IDE - Hooks"                   # recommended
+export PRISMA_AIRS_API_ENDPOINT=https://service.api.aisecurity.paloaltonetworks.com  # optional
+```
+
+:::info[Only `PRISMA_AIRS_API_KEY` is required]
+The endpoint defaults to the US region. `PRISMA_AIRS_PROFILE_NAME` sets the AIRS security profile for all scan directions. If you need different profiles per direction, use `PRISMA_AIRS_PROMPT_PROFILE`, `PRISMA_AIRS_RESPONSE_PROFILE`, and `PRISMA_AIRS_TOOL_PROFILE` as overrides.
+:::
+
+### Regional Endpoints
+
+| Region | Endpoint |
+|--------|----------|
+| US (default) | `https://service.api.aisecurity.paloaltonetworks.com` |
+| EU | `https://service-de.api.aisecurity.paloaltonetworks.com` |
+| India | `https://service-in.api.aisecurity.paloaltonetworks.com` |
+| Singapore | `https://service-sg.api.aisecurity.paloaltonetworks.com` |
+
+## Validate Connectivity
+
+<Tabs>
+  <TabItem value="npm" label="npm global install" default>
+
+```bash
+prisma-airs-hooks validate-connection
+prisma-airs-hooks validate-detection
+```
+
+  </TabItem>
+  <TabItem value="source" label="From source">
+
+```bash
+npm run validate-connection
+npm run validate-detection
+```
+
+  </TabItem>
+</Tabs>
+
+## Register Hooks in Cursor
+
+<Tabs>
+  <TabItem value="npm" label="npm global install" default>
+
+```bash
+prisma-airs-hooks install --global
+```
+
+  </TabItem>
+  <TabItem value="source" label="From source">
+
+```bash
+npm run install-hooks -- --global
+```
+
+  </TabItem>
+</Tabs>
+
+This writes `hooks.json` pointing at the precompiled JS in `dist/` and copies `airs-config.json` to the hooks config directory.
+
+:::tip[Global installation recommended]
+Use `--global` to install hooks at `~/.cursor/hooks.json` so they apply across all workspaces without per-project setup.
+:::
+
+## Restart Cursor
+
+Cursor reads `hooks.json` at startup. **Restart Cursor** to activate the hooks.
+
+## Verify
+
+<Tabs>
+  <TabItem value="npm" label="npm global install" default>
+
+```bash
+prisma-airs-hooks verify
+```
+
+  </TabItem>
+  <TabItem value="source" label="From source">
+
+```bash
+npm run verify-hooks
+```
+
+  </TabItem>
+</Tabs>
+
+## Uninstall
+
+<Tabs>
+  <TabItem value="npm" label="npm global install" default>
+
+```bash
+prisma-airs-hooks uninstall --global
+```
+
+  </TabItem>
+  <TabItem value="source" label="From source">
+
+```bash
+npm run uninstall-hooks -- --global
+```
+
+  </TabItem>
+</Tabs>
+
+Removes AIRS entries from `hooks.json` while preserving other hooks, config, and logs.
