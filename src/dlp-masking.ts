@@ -1,5 +1,4 @@
-/** Enforcement action per detection service */
-export type EnforcementAction = "block" | "mask" | "allow";
+import type { EnforcementAction } from "./types.js";
 
 /** Default enforcement configuration */
 export const DEFAULT_ENFORCEMENT: Record<string, EnforcementAction> = {
@@ -31,18 +30,4 @@ export function getEnforcementAction(
   }
 
   return hasMask ? "mask" : "allow";
-}
-
-/** Simple masking: replace sensitive substrings with asterisks */
-export function maskContent(
-  content: string,
-  patterns: string[],
-): string {
-  let masked = content;
-  for (const pattern of patterns) {
-    if (pattern && masked.includes(pattern)) {
-      masked = masked.replaceAll(pattern, "*".repeat(pattern.length));
-    }
-  }
-  return masked;
 }

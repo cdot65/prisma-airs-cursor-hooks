@@ -22,14 +22,21 @@ function writeConfig(overrides: Record<string, unknown> = {}) {
 }
 
 describe("config", () => {
+  let savedProfileName: string | undefined;
+
   beforeEach(() => {
     mkdirSync(TMP_DIR, { recursive: true });
     process.env.PRISMA_AIRS_API_KEY = "test-key-123";
+    savedProfileName = process.env.PRISMA_AIRS_PROFILE_NAME;
+    delete process.env.PRISMA_AIRS_PROFILE_NAME;
   });
 
   afterEach(() => {
     rmSync(TMP_DIR, { recursive: true, force: true });
     delete process.env.PRISMA_AIRS_API_KEY;
+    if (savedProfileName !== undefined) {
+      process.env.PRISMA_AIRS_PROFILE_NAME = savedProfileName;
+    }
   });
 
   it("loads valid config", () => {
@@ -109,6 +116,38 @@ describe("config", () => {
     delete process.env.PRISMA_AIRS_PROMPT_PROFILE;
     delete process.env.PRISMA_AIRS_RESPONSE_PROFILE;
     delete process.env.PRISMA_AIRS_TOOL_PROFILE;
+  });
+
+  it("uses PRISMA_AIRS_PROFILE_NAME as base for all profiles", () => {
+    process.env.PRISMA_AIRS_PROFILE_NAME = "My Custom Profile";
+    const path = writeConfig({
+      profiles: {
+        prompt: "${PRISMA_AIRS_PROMPT_PROFILE}",
+        response: "${PRISMA_AIRS_RESPONSE_PROFILE}",
+        tool: "${PRISMA_AIRS_TOOL_PROFILE}",
+      },
+    });
+    const config = loadConfig(path);
+    expect(config.profiles.prompt).toBe("My Custom Profile");
+    expect(config.profiles.response).toBe("My Custom Profile");
+    expect(config.profiles.tool).toBe("My Custom Profile");
+  });
+
+  it("per-direction env vars override PRISMA_AIRS_PROFILE_NAME", () => {
+    process.env.PRISMA_AIRS_PROFILE_NAME = "Base Profile";
+    process.env.PRISMA_AIRS_PROMPT_PROFILE = "Prompt Override";
+    const path = writeConfig({
+      profiles: {
+        prompt: "${PRISMA_AIRS_PROMPT_PROFILE}",
+        response: "${PRISMA_AIRS_RESPONSE_PROFILE}",
+        tool: "${PRISMA_AIRS_TOOL_PROFILE}",
+      },
+    });
+    const config = loadConfig(path);
+    expect(config.profiles.prompt).toBe("Prompt Override");
+    expect(config.profiles.response).toBe("Base Profile");
+    expect(config.profiles.tool).toBe("Base Profile");
+    delete process.env.PRISMA_AIRS_PROMPT_PROFILE;
   });
 
   it("rejects invalid JSON", () => {

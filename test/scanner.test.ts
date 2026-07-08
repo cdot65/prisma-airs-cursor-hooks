@@ -4,9 +4,7 @@ import type { AirsConfig } from "../src/types.js";
 
 // Mock the airs-client module
 vi.mock("../src/airs-client.js", () => ({
-  scanPromptContent: vi.fn(),
-  scanResponseContent: vi.fn(),
-  scanToolEventContent: vi.fn(),
+  executeScan: vi.fn(),
   resetInit: vi.fn(),
   AISecSDKException: class AISecSDKException extends Error {
     constructor(message: string) {
@@ -17,7 +15,7 @@ vi.mock("../src/airs-client.js", () => ({
 }));
 
 import { scanPrompt, scanResponse, scanToolEvent } from "../src/scanner.js";
-import { scanPromptContent, scanResponseContent, scanToolEventContent } from "../src/airs-client.js";
+import { executeScan } from "../src/airs-client.js";
 
 const mockConfig: AirsConfig = {
   endpoint: "https://test.api.prismacloud.io",
@@ -50,8 +48,7 @@ describe("scanPrompt", () => {
   beforeEach(() => {
     process.env.PRISMA_AIRS_API_KEY = "test-key";
     logger = new Logger("/dev/null");
-    vi.mocked(scanPromptContent).mockReset();
-    vi.mocked(scanResponseContent).mockReset();
+    vi.mocked(executeScan).mockReset();
   });
 
   afterEach(() => {
@@ -59,7 +56,7 @@ describe("scanPrompt", () => {
   });
 
   it("passes through in observe mode even on block verdict", async () => {
-    vi.mocked(scanPromptContent).mockResolvedValue({
+    vi.mocked(executeScan).mockResolvedValue({
       result: blockScanResult as any,
       latencyMs: 100,
     });
@@ -69,7 +66,7 @@ describe("scanPrompt", () => {
   });
 
   it("blocks in enforce mode with UX-friendly message", async () => {
-    vi.mocked(scanPromptContent).mockResolvedValue({
+    vi.mocked(executeScan).mockResolvedValue({
       result: blockScanResult as any,
       latencyMs: 100,
     });
@@ -91,17 +88,17 @@ describe("scanPrompt", () => {
     const config = { ...mockConfig, mode: "bypass" as const };
     const result = await scanPrompt(config, "test", logger);
     expect(result.action).toBe("pass");
-    expect(scanPromptContent).not.toHaveBeenCalled();
+    expect(executeScan).not.toHaveBeenCalled();
   });
 
   it("passes through on empty prompt", async () => {
     const result = await scanPrompt(mockConfig, "   ", logger);
     expect(result.action).toBe("pass");
-    expect(scanPromptContent).not.toHaveBeenCalled();
+    expect(executeScan).not.toHaveBeenCalled();
   });
 
   it("allows on allow verdict in enforce mode", async () => {
-    vi.mocked(scanPromptContent).mockResolvedValue({
+    vi.mocked(executeScan).mockResolvedValue({
       result: allowScanResult as any,
       latencyMs: 50,
     });
@@ -112,10 +109,51 @@ describe("scanPrompt", () => {
   });
 
   it("fails open on SDK error", async () => {
-    vi.mocked(scanPromptContent).mockRejectedValue(new Error("network down"));
+    vi.mocked(executeScan).mockRejectedValue(new Error("network down"));
 
     const result = await scanPrompt(mockConfig, "test", logger);
     expect(result.action).toBe("pass");
+  });
+
+  it("skips oversized prompts per content limits (fail-open)", async () => {
+    const config = { ...mockConfig, content_limits: { max_scan_bytes: 100, truncate_bytes: 50 } };
+    const result = await scanPrompt(config, "x".repeat(200), logger);
+    expect(result.action).toBe("pass");
+    expect(executeScan).not.toHaveBeenCalled();
+  });
+
+  it("truncates prompts between truncate and max limits", async () => {
+    vi.mocked(executeScan).mockResolvedValue({
+      result: allowScanResult as any,
+      latencyMs: 10,
+    });
+    const config = { ...mockConfig, content_limits: { max_scan_bytes: 100, truncate_bytes: 50 } };
+    await scanPrompt(config, "y".repeat(80), logger);
+    expect(executeScan).toHaveBeenCalledWith(
+      config,
+      { direction: "prompt", prompt: "y".repeat(50) },
+      expect.any(String),
+      expect.any(Logger),
+    );
+  });
+
+  it("blocks in enforce mode even when no detection services are parsed", async () => {
+    // AIRS can return action=block with an empty/missing *_detected map
+    // (e.g. tool_event scans). The block verdict must still be honored.
+    vi.mocked(executeScan).mockResolvedValue({
+      result: {
+        action: "block",
+        scan_id: "scan-nodetect",
+        report_id: "report-nodetect",
+        category: "malicious",
+      } as any,
+      latencyMs: 100,
+    });
+
+    const config = { ...mockConfig, mode: "enforce" as const };
+    const result = await scanPrompt(config, "test prompt", logger);
+    expect(result.action).toBe("block");
+    expect(result.message).toContain("Security Policy");
   });
 });
 
@@ -125,8 +163,7 @@ describe("scanResponse", () => {
   beforeEach(() => {
     process.env.PRISMA_AIRS_API_KEY = "test-key";
     logger = new Logger("/dev/null");
-    vi.mocked(scanPromptContent).mockReset();
-    vi.mocked(scanResponseContent).mockReset();
+    vi.mocked(executeScan).mockReset();
   });
 
   afterEach(() => {
@@ -134,7 +171,7 @@ describe("scanResponse", () => {
   });
 
   it("extracts code and sends via SDK", async () => {
-    vi.mocked(scanResponseContent).mockResolvedValue({
+    vi.mocked(executeScan).mockResolvedValue({
       result: allowScanResult as any,
       latencyMs: 100,
     });
@@ -142,34 +179,36 @@ describe("scanResponse", () => {
     const response = "Here's code:\n\n```python\nprint('hello')\n```\n\nDone.";
     await scanResponse(mockConfig, response, logger);
 
-    expect(scanResponseContent).toHaveBeenCalledWith(
+    expect(executeScan).toHaveBeenCalledWith(
       mockConfig,
-      expect.stringContaining("Here's code:"),
-      expect.stringContaining("print('hello')"),
+      {
+        direction: "response",
+        response: expect.stringContaining("Here's code:"),
+        codeResponse: expect.stringContaining("print('hello')"),
+      },
       expect.any(String),
       expect.any(Logger),
     );
   });
 
   it("sends only response field when no code found", async () => {
-    vi.mocked(scanResponseContent).mockResolvedValue({
+    vi.mocked(executeScan).mockResolvedValue({
       result: allowScanResult as any,
       latencyMs: 50,
     });
 
     await scanResponse(mockConfig, "Just plain text response.", logger);
 
-    expect(scanResponseContent).toHaveBeenCalledWith(
+    expect(executeScan).toHaveBeenCalledWith(
       mockConfig,
-      "Just plain text response.",
-      undefined,
+      { direction: "response", response: "Just plain text response.", codeResponse: undefined },
       expect.any(String),
       expect.any(Logger),
     );
   });
 
   it("blocks response in enforce mode with UX-friendly message", async () => {
-    vi.mocked(scanResponseContent).mockResolvedValue({
+    vi.mocked(executeScan).mockResolvedValue({
       result: {
         action: "block",
         scan_id: "scan-resp-1",
@@ -198,7 +237,7 @@ describe("scanResponse", () => {
     const config = { ...mockConfig, mode: "bypass" as const };
     const result = await scanResponse(config, "test", logger);
     expect(result.action).toBe("pass");
-    expect(scanResponseContent).not.toHaveBeenCalled();
+    expect(executeScan).not.toHaveBeenCalled();
   });
 });
 
@@ -208,7 +247,7 @@ describe("scanToolEvent", () => {
   beforeEach(() => {
     process.env.PRISMA_AIRS_API_KEY = "test-key";
     logger = new Logger("/dev/null");
-    vi.mocked(scanToolEventContent).mockReset();
+    vi.mocked(executeScan).mockReset();
   });
 
   afterEach(() => {
@@ -216,7 +255,7 @@ describe("scanToolEvent", () => {
   });
 
   it("scans tool event and passes in observe mode", async () => {
-    vi.mocked(scanToolEventContent).mockResolvedValue({
+    vi.mocked(executeScan).mockResolvedValue({
       result: {
         action: "block",
         scan_id: "scan-tool-1",
@@ -232,7 +271,7 @@ describe("scanToolEvent", () => {
   });
 
   it("blocks tool event in enforce mode", async () => {
-    vi.mocked(scanToolEventContent).mockResolvedValue({
+    vi.mocked(executeScan).mockResolvedValue({
       result: {
         action: "block",
         scan_id: "scan-tool-2",
@@ -254,11 +293,33 @@ describe("scanToolEvent", () => {
     const config = { ...mockConfig, mode: "bypass" as const };
     const result = await scanToolEvent(config, "MCP:s:t", "input", undefined, logger);
     expect(result.action).toBe("pass");
-    expect(scanToolEventContent).not.toHaveBeenCalled();
+    expect(executeScan).not.toHaveBeenCalled();
+  });
+
+  it("scans output alone when input exceeds content limits", async () => {
+    vi.mocked(executeScan).mockResolvedValue({
+      result: { action: "allow", scan_id: "s", report_id: "r", category: "benign" } as any,
+      latencyMs: 10,
+    });
+    const config = { ...mockConfig, content_limits: { max_scan_bytes: 100, truncate_bytes: 50 } };
+    await scanToolEvent(config, "MCP:s:t", "x".repeat(200), "small output", logger);
+    expect(executeScan).toHaveBeenCalledWith(
+      config,
+      { direction: "tool", serverName: "s", toolInvoked: "t", input: undefined, output: "small output" },
+      expect.any(String),
+      expect.any(Logger),
+    );
+  });
+
+  it("skips entirely when both input and output exceed limits", async () => {
+    const config = { ...mockConfig, content_limits: { max_scan_bytes: 100, truncate_bytes: 50 } };
+    const result = await scanToolEvent(config, "MCP:s:t", "x".repeat(200), "y".repeat(200), logger);
+    expect(result.action).toBe("pass");
+    expect(executeScan).not.toHaveBeenCalled();
   });
 
   it("fails open on SDK error", async () => {
-    vi.mocked(scanToolEventContent).mockRejectedValue(new Error("network down"));
+    vi.mocked(executeScan).mockRejectedValue(new Error("network down"));
     const result = await scanToolEvent(mockConfig, "MCP:s:t", "input", undefined, logger);
     expect(result.action).toBe("pass");
   });

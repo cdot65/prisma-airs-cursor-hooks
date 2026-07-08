@@ -25,7 +25,7 @@ All hooks use Cursor's native hooks.json system. They receive structured JSON on
 - **Node.js 18+** (native fetch, crypto.randomUUID)
 - **Cursor IDE** (with hooks support)
 - **Prisma AIRS API key** and regional endpoint URL
-- **AIRS security profiles** configured for prompt and response scanning
+- **AIRS security profile** configured in Strata Cloud Manager
 
 ## Install
 
@@ -41,13 +41,11 @@ Add to your shell profile (`~/.zshrc`, `~/.bashrc`, etc.):
 
 ```bash
 export PRISMA_AIRS_API_KEY=<your-x-pan-token>
+export PRISMA_AIRS_PROFILE_NAME="Cursor IDE - Hooks"                                 # recommended
 export PRISMA_AIRS_API_ENDPOINT=https://service.api.aisecurity.paloaltonetworks.com  # optional, defaults to US
-export PRISMA_AIRS_PROMPT_PROFILE=cursor-ide-prompt-profile      # optional
-export PRISMA_AIRS_RESPONSE_PROFILE=cursor-ide-response-profile  # optional
-export PRISMA_AIRS_TOOL_PROFILE=cursor-ide-tool-profile          # optional
 ```
 
-> **Note:** Cursor inherits your shell environment, so hooks automatically have access to these variables. Only `PRISMA_AIRS_API_KEY` is required — endpoint defaults to US and profile names default to `cursor-ide-prompt-profile` / `cursor-ide-response-profile` / `cursor-ide-tool-profile`.
+> **Note:** Cursor inherits your shell environment, so hooks automatically have access to these variables. Only `PRISMA_AIRS_API_KEY` is required — endpoint defaults to US and `PRISMA_AIRS_PROFILE_NAME` defaults to `Cursor IDE - Hooks`. For per-direction overrides, set `PRISMA_AIRS_PROMPT_PROFILE`, `PRISMA_AIRS_RESPONSE_PROFILE`, or `PRISMA_AIRS_TOOL_PROFILE`.
 
 Available regional endpoints:
 | Region | Endpoint |
@@ -164,6 +162,10 @@ After `failure_threshold` consecutive AIRS API failures, scanning is temporarily
 | `prisma-airs-hooks validate-connection` | Test AIRS API connectivity |
 | `prisma-airs-hooks validate-detection` | Verify prompt injection detection |
 | `prisma-airs-hooks stats [--since 7d] [--json]` | Show scan statistics |
+| `prisma-airs-hooks logs [--n 10] [--json]` | Show recent scan log entries |
+| `prisma-airs-hooks rotate-log` | Rotate the scan log now |
+| `prisma-airs-hooks validate-config` | Validate the AIRS configuration |
+| `prisma-airs-hooks doctor` | Diagnose and repair the installation |
 
 ## Uninstall
 
@@ -227,6 +229,10 @@ npm run build
 | `npm run uninstall-hooks -- --global` | Remove AIRS entries from global hooks.json |
 | `npm run verify-hooks` | Check hooks are installed and env vars set |
 | `npm run stats` | Show scan statistics from log file |
+| `npm run logs` | Show recent scan log entries |
+| `npm run rotate-log` | Rotate the scan log now |
+| `npm run validate-config` | Validate the AIRS configuration |
+| `npm run doctor` | Diagnose and repair the installation |
 
 ### Development mode
 
@@ -245,19 +251,22 @@ This adds ~1.5s per hook invocation compared to compiled JS, so switch back to `
 ```
 src/                           TypeScript source
   hooks/
+    run-hook.ts                Shared hook harness (stdin/parse/config/fail-open)
     before-submit-prompt.ts    Cursor beforeSubmitPrompt entry point
+    before-mcp-execution.ts    Cursor beforeMCPExecution entry point
+    post-tool-use.ts           Cursor postToolUse entry point
     after-agent-response.ts    Cursor afterAgentResponse entry point
   cli.ts                       CLI entry point (prisma-airs-hooks command)
   config.ts                    Config loader (project → global fallback)
-  airs-client.ts               SDK wrapper with circuit breaker
-  scanner.ts                   Scan orchestration + DLP masking + UX messages
+  airs-client.ts               executeScan seam: SDK transport + circuit breaker
+  scanner.ts                   Scan orchestration, content limits, UX messages
+  tool-routing.ts              postToolUse routing (which scan per tool)
   code-extractor.ts            Separates code from natural language
   logger.ts                    JSON Lines logging with rotation
   circuit-breaker.ts           Failure tracking with cooldown bypass
   dlp-masking.ts               Per-service enforcement actions
   log-rotation.ts              Rotate logs at 10MB
   types.ts                     TypeScript interfaces
-  adapters/                    Multi-IDE adapter layer
 dist/                          Compiled JS (production hooks point here)
 scripts/
   install-hooks.ts             Write .cursor/hooks.json (points at dist/)

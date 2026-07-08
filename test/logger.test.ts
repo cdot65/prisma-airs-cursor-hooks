@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach } from "vitest";
-import { readFileSync, rmSync, mkdirSync } from "node:fs";
+import { readFileSync, writeFileSync, rmSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { Logger } from "../src/logger.js";
 
@@ -77,6 +77,21 @@ describe("Logger", () => {
     const entry = JSON.parse(readFileSync(LOG_PATH, "utf-8").trim());
     expect(entry.event).toBe("circuit_breaker_open");
     expect(entry.failures).toBe(5);
+  });
+
+  it("rotates an oversized log on the first write of a new process", () => {
+    // hook processes are short-lived — rotation must trigger on write #1
+    mkdirSync(TMP_DIR, { recursive: true });
+    const big = "x".repeat(10 * 1024 * 1024 + 1);
+    writeFileSync(LOG_PATH, big);
+
+    const logger = new Logger(LOG_PATH);
+    logger.logEvent("first_write");
+
+    const rotated = readFileSync(`${LOG_PATH}.1`, "utf-8");
+    expect(rotated.length).toBeGreaterThan(10 * 1024 * 1024);
+    const fresh = readFileSync(LOG_PATH, "utf-8");
+    expect(fresh).toContain('"event":"first_write"');
   });
 
   it("creates parent directories automatically", () => {

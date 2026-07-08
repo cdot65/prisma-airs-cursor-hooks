@@ -1,0 +1,125 @@
+---
+id: quick-start
+title: Quick Start
+sidebar_position: 3
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+Get Prisma AIRS scanning in Cursor in under 5 minutes.
+
+## 1. Install
+
+<Tabs>
+  <TabItem value="npm" label="npm (recommended)" default>
+
+```bash
+npm install -g @cdot65/prisma-airs-cursor-hooks
+```
+
+  </TabItem>
+  <TabItem value="source" label="From source">
+
+```bash
+git clone https://github.com/cdot65/prisma-airs-cursor-hooks.git
+cd prisma-airs-cursor-hooks
+npm install && npm run build
+```
+
+  </TabItem>
+</Tabs>
+
+## 2. Set Your API Key
+
+```bash
+export PRISMA_AIRS_API_KEY=<your-x-pan-token>
+```
+
+## 3. Validate Connectivity
+
+<Tabs>
+  <TabItem value="npm" label="npm global install" default>
+
+```bash
+prisma-airs-hooks validate-connection
+```
+
+  </TabItem>
+  <TabItem value="source" label="From source">
+
+```bash
+npm run validate-connection
+```
+
+  </TabItem>
+</Tabs>
+
+You should see a successful scan result confirming your API key and endpoint work.
+
+## 4. Install Hooks Globally
+
+<Tabs>
+  <TabItem value="npm" label="npm global install" default>
+
+```bash
+prisma-airs-hooks install --global
+```
+
+  </TabItem>
+  <TabItem value="source" label="From source">
+
+```bash
+npm run install-hooks -- --global
+```
+
+  </TabItem>
+</Tabs>
+
+## 5. Restart Cursor
+
+Quit and reopen Cursor. Open **Settings > Hooks** to confirm all four hooks appear:
+
+- `beforeSubmitPrompt`
+- `beforeMCPExecution`
+- `postToolUse`
+- `afterAgentResponse`
+
+## 6. Test It
+
+Send a prompt in Cursor's AI chat. Check the execution log in **Settings > Hooks** to see the hooks fire.
+
+To test blocking, try a prompt that triggers a detection (e.g., a toxic or injection prompt). If your AIRS profile has enforcement set to "block", you'll see:
+
+```
+Submission blocked by hook
+```
+
+With a detailed message explaining what was detected and why.
+
+## 7. Review Scan Logs
+
+<Tabs>
+  <TabItem value="npm" label="npm global install" default>
+
+```bash
+prisma-airs-hooks stats
+```
+
+  </TabItem>
+  <TabItem value="source" label="From source">
+
+```bash
+npm run stats
+```
+
+  </TabItem>
+</Tabs>
+
+Shows scan totals, block rates, latency percentiles, and detection breakdowns.
+
+## What's Next?
+
+- [Configuration](configuration) -- tune modes, enforcement, and profiles
+- [Detection Services](../features/detection-services) -- what AIRS scans for
+- [Architecture](../architecture/overview) -- how the hooks work internally

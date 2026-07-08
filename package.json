@@ -49,8 +49,12 @@
     "uninstall-hooks": "tsx scripts/uninstall-hooks.ts",
     "verify-hooks": "tsx scripts/verify-hooks.ts",
     "stats": "tsx scripts/airs-stats.ts",
-    "docs:serve": "mkdocs serve",
-    "docs:build": "mkdocs build"
+    "logs": "tsx scripts/airs-logs.ts",
+    "rotate-log": "tsx scripts/rotate-log.ts",
+    "validate-config": "tsx scripts/validate-config.ts",
+    "doctor": "tsx scripts/doctor.ts",
+    "docs:serve": "npm --prefix docs-site start",
+    "docs:build": "npm --prefix docs-site run build"
   },
   "dependencies": {
     "@cdot65/prisma-airs-sdk": "^0.6.7",
@@ -58,6 +62,7 @@
   },
   "devDependencies": {
     "@types/node": "^25.5.0",
+    "@vitest/coverage-v8": "^2.1.9",
     "typescript": "^5.5.0",
     "vitest": "^2.1.0"
   }

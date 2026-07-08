@@ -10,6 +10,21 @@ import { getApiKey } from "./config.js";
 import { CircuitBreaker } from "./circuit-breaker.js";
 import { Logger } from "./logger.js";
 
+/**
+ * A scan request, discriminated by direction. The direction selects both the
+ * AIRS content shape and the security profile (config.profiles[direction]).
+ */
+export type ScanRequest =
+  | { direction: "prompt"; prompt: string }
+  | { direction: "response"; response: string; codeResponse?: string }
+  | {
+      direction: "tool";
+      serverName: string;
+      toolInvoked: string;
+      input?: string;
+      output?: string;
+    };
+
 /** Build a session ID from user email + UTC date (e.g. "alice@co.com:2026-04-09") */
 function buildSessionId(appUser: string): string {
   const date = new Date().toISOString().slice(0, 10);
@@ -67,113 +82,60 @@ function circuitOpenResult(): ScanResponse {
   } as unknown as ScanResponse;
 }
 
-/** Scan a prompt via AIRS Sync API using the SDK */
-export async function scanPromptContent(
-  config: AirsConfig,
-  prompt: string,
-  appUser: string,
-  logger?: Logger,
-): Promise<{ result: ScanResponse; latencyMs: number }> {
-  ensureInit(config, logger);
-
-  // Circuit breaker check — bypass scan if open
-  if (breaker && !breaker.shouldAllow()) {
-    logger?.logEvent("scan_bypassed_circuit_open", { direction: "prompt" });
-    return { result: circuitOpenResult(), latencyMs: 0 };
-  }
-
-  const scanner = new Scanner();
-  const content = new Content({ prompt });
-
-  const start = Date.now();
-  try {
-    const result = await scanner.syncScan(
-      { profile_name: config.profiles.prompt },
-      content,
-      { sessionId: buildSessionId(appUser), metadata: { app_name: "cursor-ide", app_user: appUser } },
-    );
-    const latencyMs = Date.now() - start;
-    breaker?.recordSuccess();
-    return { result, latencyMs };
-  } catch (err) {
-    breaker?.recordFailure();
-    throw err;
+/** Build the SDK Content payload for a scan request */
+function buildContent(request: ScanRequest): Content {
+  switch (request.direction) {
+    case "prompt":
+      return new Content({ prompt: request.prompt });
+    case "response": {
+      const opts: Record<string, string> = { response: request.response };
+      if (request.codeResponse) opts.codeResponse = request.codeResponse;
+      return new Content(opts);
+    }
+    case "tool": {
+      const toolEvent: Record<string, unknown> = {
+        metadata: {
+          ecosystem: "mcp",
+          method: "tools/call",
+          server_name: request.serverName,
+          tool_invoked: request.toolInvoked,
+        },
+      };
+      if (request.input !== undefined) toolEvent.input = request.input;
+      if (request.output !== undefined) toolEvent.output = request.output;
+      return new Content({ toolEvent });
+    }
   }
 }
 
-/** Scan a response (with optional code) via AIRS Sync API using the SDK */
-export async function scanResponseContent(
+/**
+ * Execute a scan against the AIRS Sync API.
+ *
+ * Owns everything transport-related: SDK init, circuit breaker, profile
+ * selection by direction, session binding, and latency measurement.
+ * Fails open (synthetic allow) when the circuit breaker is open;
+ * propagates SDK errors otherwise.
+ */
+export async function executeScan(
   config: AirsConfig,
-  response: string,
-  codeResponse: string | undefined,
+  request: ScanRequest,
   appUser: string,
   logger?: Logger,
 ): Promise<{ result: ScanResponse; latencyMs: number }> {
   ensureInit(config, logger);
 
   if (breaker && !breaker.shouldAllow()) {
-    logger?.logEvent("scan_bypassed_circuit_open", { direction: "response" });
+    logger?.logEvent("scan_bypassed_circuit_open", { direction: request.direction });
     return { result: circuitOpenResult(), latencyMs: 0 };
   }
 
   const scanner = new Scanner();
-  const contentOpts: Record<string, string> = { response };
-  if (codeResponse) {
-    contentOpts.codeResponse = codeResponse;
-  }
-  const content = new Content(contentOpts);
+  const content = buildContent(request);
 
   const start = Date.now();
   try {
     const result = await scanner.syncScan(
-      { profile_name: config.profiles.response },
-      content,
-      { sessionId: buildSessionId(appUser), metadata: { app_name: "cursor-ide", app_user: appUser } },
-    );
-    const latencyMs = Date.now() - start;
-    breaker?.recordSuccess();
-    return { result, latencyMs };
-  } catch (err) {
-    breaker?.recordFailure();
-    throw err;
-  }
-}
-
-/** Scan a tool event (MCP input/output) via AIRS Sync API using the SDK */
-export async function scanToolEventContent(
-  config: AirsConfig,
-  serverName: string,
-  toolInvoked: string,
-  input: string | undefined,
-  output: string | undefined,
-  appUser: string,
-  logger?: Logger,
-): Promise<{ result: ScanResponse; latencyMs: number }> {
-  ensureInit(config, logger);
-
-  if (breaker && !breaker.shouldAllow()) {
-    logger?.logEvent("scan_bypassed_circuit_open", { direction: "tool" });
-    return { result: circuitOpenResult(), latencyMs: 0 };
-  }
-
-  const scanner = new Scanner();
-  const toolEvent: Record<string, unknown> = {
-    metadata: {
-      ecosystem: "mcp",
-      method: "tools/call",
-      server_name: serverName,
-      tool_invoked: toolInvoked,
-    },
-  };
-  if (input !== undefined) toolEvent.input = input;
-  if (output !== undefined) toolEvent.output = output;
-
-  const content = new Content({ toolEvent });
-
-  const start = Date.now();
-  try {
-    const result = await scanner.syncScan(
-      { profile_name: config.profiles.tool },
+      { profile_name: config.profiles[request.direction] },
       content,
       { sessionId: buildSessionId(appUser), metadata: { app_name: "cursor-ide", app_user: appUser } },
     );

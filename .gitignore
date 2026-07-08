@@ -22,8 +22,10 @@ Thumbs.db
 # Test coverage
 coverage/
 
-# MkDocs build output
-site/
+# Docusaurus build output (docs-site/ has its own .gitignore for node_modules etc.)
+docs-site/build/
+docs-site/.docusaurus/
 
 # Cursor hooks runtime
 .cursor/hooks/airs-scan.log
+.claude/

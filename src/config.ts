@@ -30,8 +30,9 @@ function isValidUrl(url: string): boolean {
  *   3. .cursor/hooks/airs-config.json in cwd
  *   4. ~/.cursor/hooks/airs-config.json (global/user-level)
  *   5. airs-config.json in cwd (project root fallback)
+ * Returns the first candidate when none exist (used as the create target).
  */
-function resolveConfigPath(configPath?: string): string {
+export function resolveConfigPath(configPath?: string): string {
   if (configPath) return configPath;
 
   const candidates: string[] = [];
@@ -81,9 +82,11 @@ export function loadConfig(configPath?: string): AirsConfig {
   }
 
   // Resolve env var references in profile names
-  config.profiles.prompt = resolveEnvVars(config.profiles.prompt) || DEFAULT_PROFILE;
-  config.profiles.response = resolveEnvVars(config.profiles.response) || DEFAULT_PROFILE;
-  config.profiles.tool = resolveEnvVars(config.profiles?.tool ?? "") || DEFAULT_PROFILE;
+  // PRISMA_AIRS_PROFILE_NAME is the base default; per-direction vars override it
+  const baseProfile = process.env.PRISMA_AIRS_PROFILE_NAME || DEFAULT_PROFILE;
+  config.profiles.prompt = resolveEnvVars(config.profiles.prompt) || baseProfile;
+  config.profiles.response = resolveEnvVars(config.profiles.response) || baseProfile;
+  config.profiles.tool = resolveEnvVars(config.profiles?.tool ?? "") || baseProfile;
 
   // Validate mode
   if (!VALID_MODES.includes(config.mode)) {

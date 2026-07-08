@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { getEnforcementAction, maskContent } from "../src/dlp-masking.js";
+import { getEnforcementAction } from "../src/dlp-masking.js";
 
 interface Finding {
   detection_service: string;
@@ -47,25 +47,5 @@ describe("getEnforcementAction", () => {
       { detection_service: "new_service", verdict: "detected", detail: "" },
     ];
     expect(getEnforcementAction(findings, {})).toBe("block");
-  });
-});
-
-describe("maskContent", () => {
-  it("replaces sensitive patterns with asterisks", () => {
-    const result = maskContent("My API key is sk-12345 and secret is abc", [
-      "sk-12345",
-      "abc",
-    ]);
-    expect(result).toBe("My API key is ******** and secret is ***");
-  });
-
-  it("handles empty patterns array", () => {
-    const result = maskContent("nothing to mask", []);
-    expect(result).toBe("nothing to mask");
-  });
-
-  it("handles patterns not found in content", () => {
-    const result = maskContent("safe text", ["not-here"]);
-    expect(result).toBe("safe text");
   });
 });
