@@ -4,6 +4,30 @@ title: Release Notes
 sidebar_position: 1
 ---
 
+## 0.3.0
+
+### New Features — optional hooks
+
+Six new opt-in scanning surfaces, installed with `prisma-airs-hooks install --optional <names|all>` (default install is unchanged):
+
+- **`beforeShellExecution`** (can block) — scans shell command text as `tool_event` before execution; enforce-mode block denies the command.
+- **`afterShellExecution`** (observe) — scans terminal output for DLP (leaked credentials, env dumps).
+- **`beforeReadFile`** (can block) — DLP-scans full file contents before the Agent reads them into model context.
+- **`beforeTabFileRead`** (can block) — same DLP gate for Tab inline completions; first AIRS coverage of the Tab surface.
+- **`subagentStart`** (can block) — scans subagent task text for prompt injection before the subagent spawns.
+- **`afterMCPExecution`** (observe) — scans MCP tool input + full result JSON after execution.
+
+- **MCP output sanitization** — new `sanitize_mcp_output` config flag (default `false`): in enforce mode, postToolUse replaces flagged MCP tool output with a redaction notice via Cursor's `updated_mcp_tool_output`, so flagged content never reaches the model.
+
+### Improvements
+
+- Data-driven hook registry drives install/uninstall/verify scripts; `verify-hooks` reports optional hooks without failing when absent.
+- `beforeShellExecution`, `afterShellExecution`, and `beforeReadFile` also run in Cursor cloud agents, extending AIRS coverage there.
+
+See [Optional Hooks](../features/optional-hooks) for details.
+
+---
+
 ## 0.2.2
 
 ### Fixes
