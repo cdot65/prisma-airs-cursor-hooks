@@ -1,13 +1,14 @@
-import {themes as prismThemes} from 'prism-react-renderer';
 import type {Config} from '@docusaurus/types';
 import type * as Preset from '@docusaurus/preset-classic';
+// Gruvbox dark (hard contrast) syntax theme — see src/css/prism-gruvbox.js
+import gruvboxTheme from './src/css/prism-gruvbox';
 
 // This runs in Node.js - Don't use client-side code here (browser APIs, JSX...)
 
 const config: Config = {
   title: 'Prisma AIRS Cursor Hooks',
   tagline: 'Cursor IDE hooks integrating Prisma AIRS scanning into the developer workflow',
-  favicon: 'img/favicon.ico',
+  favicon: 'img/logo.svg',
 
   // Future flags, see https://docusaurus.io/docs/api/docusaurus-config#future
   future: {
@@ -59,10 +60,11 @@ const config: Config = {
   ],
 
   themeConfig: {
-    // Replace with your project's social card
-    image: 'img/docusaurus-social-card.jpg',
+    image: 'img/logo.png',
     colorMode: {
-      respectPrefersColorScheme: true,
+      defaultMode: 'dark',
+      disableSwitch: true,
+      respectPrefersColorScheme: false,
     },
     navbar: {
       title: 'Prisma AIRS Cursor Hooks',
@@ -117,8 +119,9 @@ const config: Config = {
       copyright: `Copyright © ${new Date().getFullYear()} Calvin Remsburg. Built with Docusaurus.`,
     },
     prism: {
-      theme: prismThemes.github,
-      darkTheme: prismThemes.dracula,
+      theme: gruvboxTheme,
+      darkTheme: gruvboxTheme,
+      additionalLanguages: ['bash', 'json', 'diff'],
     },
   } satisfies Preset.ThemeConfig,
 };
