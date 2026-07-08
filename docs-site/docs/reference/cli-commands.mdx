@@ -12,7 +12,7 @@ After installing globally with `npm install -g @cdot65/prisma-airs-cursor-hooks`
 |---------|-------------|
 | `prisma-airs-hooks install [--global]` | Register hooks in Cursor's hooks.json |
 | `prisma-airs-hooks uninstall [--global]` | Remove AIRS entries from hooks.json |
-| `prisma-airs-hooks verify` | Check hooks registration, config, and env vars |
+| `prisma-airs-hooks verify [--global]` | Check hooks registration, config, and env vars (use `--global` for `~/.cursor`) |
 | `prisma-airs-hooks validate-connection` | Test AIRS API connectivity with your credentials |
 | `prisma-airs-hooks validate-detection` | Send a test prompt injection and verify detection |
 | `prisma-airs-hooks stats [--since <duration>] [--json]` | Show scan statistics |
@@ -27,8 +27,8 @@ After installing globally with `npm install -g @cdot65/prisma-airs-cursor-hooks`
 # Install hooks for all workspaces
 prisma-airs-hooks install --global
 
-# Check everything is working
-prisma-airs-hooks verify
+# Check everything is working (use --global if you installed with --global)
+prisma-airs-hooks verify --global
 
 # Stats for the last 7 days as JSON
 prisma-airs-hooks stats --since 7d --json
@@ -65,7 +65,8 @@ When working from a cloned repository:
 | `npm run install-hooks -- --global` | Install hooks to `~/.cursor/hooks.json` (all workspaces) |
 | `npm run uninstall-hooks` | Remove AIRS entries from project-level hooks.json |
 | `npm run uninstall-hooks -- --global` | Remove AIRS entries from global hooks.json |
-| `npm run verify-hooks` | Check hooks registration, config, and env vars |
+| `npm run verify-hooks` | Check project-level hooks registration, config, and env vars |
+| `npm run verify-hooks -- --global` | Check global (`~/.cursor`) hooks registration and config |
 
 ### Validation
 
@@ -86,6 +87,10 @@ When working from a cloned repository:
 | `npm run logs` | Show the most recent scan log entries |
 | `npm run logs -- --n 20` | Show the last 20 scan log entries |
 | `npm run rotate-log` | Rotate the scan log immediately |
+
+`stats` and `logs` both read the scan log from your AIRS config (`logging.path`,
+default `~/.cursor/hooks/airs-scan.log`), so they report on the same log your
+hooks actually write to — regardless of the directory you run them from.
 
 ### Documentation
 

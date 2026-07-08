@@ -4,7 +4,7 @@
  * Run: npx tsx scripts/airs-stats.ts [--since 24h] [--json]
  */
 import { readFileSync, existsSync } from "node:fs";
-import { resolve } from "node:path";
+import { resolveLogPath } from "./lib/paths.js";
 
 interface LogEntry {
   timestamp: string;
@@ -39,7 +39,7 @@ function main() {
   const sinceIdx = args.indexOf("--since");
   const sinceMs = sinceIdx >= 0 ? parseSince(args[sinceIdx + 1]) : 24 * 60 * 60 * 1000;
 
-  const logPath = resolve(process.cwd(), ".cursor", "hooks", "airs-scan.log");
+  const logPath = resolveLogPath();
   if (!existsSync(logPath)) {
     console.log("No log file found at", logPath);
     process.exit(0);

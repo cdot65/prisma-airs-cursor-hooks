@@ -3,25 +3,30 @@
  * Tamper detection: verify Cursor hooks.json contains AIRS hook entries
  * and that the AIRS config file is present.
  *
- * Run: npx tsx scripts/verify-hooks.ts
+ * Run: npx tsx scripts/verify-hooks.ts            # project-level (.cursor/)
+ *      npx tsx scripts/verify-hooks.ts --global    # user-level (~/.cursor/)
  */
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { cursorDir } from "./lib/paths.js";
 
-const CURSOR_DIR = join(process.cwd(), ".cursor");
+const isGlobal = process.argv.includes("--global");
+const CURSOR_DIR = cursorDir(isGlobal);
 const HOOKS_JSON = join(CURSOR_DIR, "hooks.json");
 const AIRS_CONFIG = join(CURSOR_DIR, "hooks", "airs-config.json");
+const scopeLabel = isGlobal ? "~/.cursor" : ".cursor";
 
 function main() {
-  console.log("Verifying Prisma AIRS hook integrity...\n");
+  const scope = isGlobal ? "global (user-level)" : "project-level";
+  console.log(`Verifying Prisma AIRS hook integrity [${scope}]...\n`);
   let issues = 0;
 
   // Check hooks.json exists
   if (!existsSync(HOOKS_JSON)) {
-    console.log("  ❌ MISSING: .cursor/hooks.json");
+    console.log(`  ❌ MISSING: ${scopeLabel}/hooks.json`);
     issues++;
   } else {
-    console.log("  ✅ Found:   .cursor/hooks.json");
+    console.log(`  ✅ Found:   ${scopeLabel}/hooks.json`);
 
     // Verify AIRS entries are present
     try {
@@ -74,9 +79,9 @@ function main() {
 
   // Check AIRS config
   if (existsSync(AIRS_CONFIG)) {
-    console.log("  ✅ Found:   .cursor/hooks/airs-config.json");
+    console.log(`  ✅ Found:   ${scopeLabel}/hooks/airs-config.json`);
   } else {
-    console.log("  ❌ MISSING: .cursor/hooks/airs-config.json");
+    console.log(`  ❌ MISSING: ${scopeLabel}/hooks/airs-config.json`);
     issues++;
   }
 
@@ -94,9 +99,15 @@ function main() {
 
   console.log("");
   if (issues === 0) {
-    console.log("✅ All hooks intact and correctly configured.");
+    console.log(`✅ All hooks intact and correctly configured [${scope}].`);
   } else {
-    console.log(`⚠️  ${issues} issue(s) found. Run 'npm run install-hooks' to restore.`);
+    const restore = isGlobal
+      ? "npm run install-hooks -- --global"
+      : "npm run install-hooks";
+    console.log(`⚠️  ${issues} issue(s) found. Run '${restore}' to restore.`);
+    if (!isGlobal) {
+      console.log("    Installed globally? Re-run with --global:  npm run verify-hooks -- --global");
+    }
     process.exit(1);
   }
 }

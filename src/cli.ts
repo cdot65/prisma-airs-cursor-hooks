@@ -5,7 +5,7 @@
  * Usage:
  *   prisma-airs-hooks install [--global]
  *   prisma-airs-hooks uninstall [--global]
- *   prisma-airs-hooks verify
+ *   prisma-airs-hooks verify [--global]
  *   prisma-airs-hooks validate-connection
  *   prisma-airs-hooks validate-detection
  *   prisma-airs-hooks stats [--since <duration>] [--json]
@@ -22,7 +22,7 @@ const passthrough = args.slice(1).join(" ");
 const COMMANDS: Record<string, { script: string; usage: string; help: string }> = {
   install: { script: "scripts/install-hooks.ts", usage: "install [--global]", help: "Install hooks into Cursor" },
   uninstall: { script: "scripts/uninstall-hooks.ts", usage: "uninstall [--global]", help: "Remove hooks from Cursor" },
-  verify: { script: "scripts/verify-hooks.ts", usage: "verify", help: "Check hooks registration and env vars" },
+  verify: { script: "scripts/verify-hooks.ts", usage: "verify [--global]", help: "Check hooks registration and env vars" },
   "validate-connection": { script: "scripts/validate-connection.ts", usage: "validate-connection", help: "Test AIRS API connectivity" },
   "validate-detection": { script: "scripts/validate-detection.ts", usage: "validate-detection", help: "Verify detection is working" },
   stats: { script: "scripts/airs-stats.ts", usage: "stats [--since] [--json]", help: "Show scan statistics" },
