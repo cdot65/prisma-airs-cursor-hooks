@@ -3,8 +3,10 @@
  * Install Prisma AIRS hooks into Cursor.
  *
  * Usage:
- *   npx tsx scripts/install-hooks.ts             # project-level (.cursor/hooks.json)
- *   npx tsx scripts/install-hooks.ts --global     # user-level (~/.cursor/hooks.json)
+ *   npx tsx scripts/install-hooks.ts                          # project-level (.cursor/hooks.json)
+ *   npx tsx scripts/install-hooks.ts --global                 # user-level (~/.cursor/hooks.json)
+ *   npx tsx scripts/install-hooks.ts --optional all           # also install every optional hook
+ *   npx tsx scripts/install-hooks.ts --optional beforeShellExecution,beforeReadFile
  *
  * Cursor reads hooks.json from multiple locations (all execute if present):
  *   1. Project:    <workspace>/.cursor/hooks.json
@@ -22,9 +24,24 @@ import {
 import { join, resolve } from "node:path";
 import { homedir } from "node:os";
 import type { CursorHooksConfig } from "../src/types.js";
+import { HOOK_DEFS, selectHooks, mergeHookEntries } from "./lib/hook-registry.js";
 
 const PROJECT_ROOT = resolve(import.meta.dirname, "..");
 const isGlobal = process.argv.includes("--global");
+
+/** Value following --optional, if present ("all" or csv of hook event names) */
+function optionalArg(): string | undefined {
+  const idx = process.argv.indexOf("--optional");
+  if (idx === -1) return undefined;
+  const value = process.argv[idx + 1];
+  if (!value || value.startsWith("--")) {
+    console.error(
+      "  ERROR: --optional requires a value: 'all' or a comma-separated list of hook names.",
+    );
+    process.exit(1);
+  }
+  return value;
+}
 
 // Determine target paths based on scope
 const CURSOR_DIR = isGlobal
@@ -37,6 +54,14 @@ const AIRS_CONFIG_DEST = join(AIRS_CONFIG_DIR, "airs-config.json");
 function main() {
   const scope = isGlobal ? "global (user-level)" : "project-level";
   console.log(`Installing Prisma AIRS Cursor hooks [${scope}]...\n`);
+
+  let hookDefs;
+  try {
+    hookDefs = selectHooks(HOOK_DEFS, optionalArg());
+  } catch (err) {
+    console.error(`  ERROR: ${err instanceof Error ? err.message : err}\n`);
+    process.exit(1);
+  }
 
   // ---- Validate environment ----
   const apiKey = process.env.PRISMA_AIRS_API_KEY;
@@ -61,10 +86,6 @@ function main() {
 
   // ---- Write or merge hooks.json ----
   const distDir = join(PROJECT_ROOT, "dist", "hooks");
-  const beforePromptCmd = `node "${join(distDir, "before-submit-prompt.js")}"`;
-  const afterResponseCmd = `node "${join(distDir, "after-agent-response.js")}"`;
-  const beforeMCPCmd = `node "${join(distDir, "before-mcp-execution.js")}"`;
-  const postToolUseCmd = `node "${join(distDir, "post-tool-use.js")}"`;
 
   // Verify dist exists
   if (!existsSync(distDir)) {
@@ -82,67 +103,11 @@ function main() {
     }
   }
 
-  const hooksConfig: CursorHooksConfig = existingConfig ?? {
-    version: 1,
-    hooks: {},
-  };
-
-  // Ensure our hooks are registered (idempotent — don't duplicate)
-  if (!hooksConfig.hooks.beforeSubmitPrompt) {
-    hooksConfig.hooks.beforeSubmitPrompt = [];
-  }
-  const hasPromptHook = hooksConfig.hooks.beforeSubmitPrompt.some(
-    (h) => h.command.includes("before-submit-prompt"),
+  const { config: hooksConfig } = mergeHookEntries(
+    existingConfig ?? { version: 1, hooks: {} },
+    hookDefs,
+    distDir,
   );
-  if (!hasPromptHook) {
-    hooksConfig.hooks.beforeSubmitPrompt.push({
-      command: beforePromptCmd,
-      timeout: 5000,
-      failClosed: false,
-    });
-  }
-
-  if (!hooksConfig.hooks.afterAgentResponse) {
-    hooksConfig.hooks.afterAgentResponse = [];
-  }
-  const hasResponseHook = hooksConfig.hooks.afterAgentResponse.some(
-    (h) => h.command.includes("after-agent-response"),
-  );
-  if (!hasResponseHook) {
-    hooksConfig.hooks.afterAgentResponse.push({
-      command: afterResponseCmd,
-      timeout: 5000,
-      failClosed: false,
-    });
-  }
-
-  if (!hooksConfig.hooks.beforeMCPExecution) {
-    hooksConfig.hooks.beforeMCPExecution = [];
-  }
-  const hasMCPHook = hooksConfig.hooks.beforeMCPExecution.some(
-    (h) => h.command.includes("before-mcp-execution"),
-  );
-  if (!hasMCPHook) {
-    hooksConfig.hooks.beforeMCPExecution.push({
-      command: beforeMCPCmd,
-      timeout: 5000,
-      failClosed: false,
-    });
-  }
-
-  if (!hooksConfig.hooks.postToolUse) {
-    hooksConfig.hooks.postToolUse = [];
-  }
-  const hasPostToolHook = hooksConfig.hooks.postToolUse.some(
-    (h) => h.command.includes("post-tool-use"),
-  );
-  if (!hasPostToolHook) {
-    hooksConfig.hooks.postToolUse.push({
-      command: postToolUseCmd,
-      timeout: 5000,
-      failClosed: false,
-    });
-  }
 
   writeFileSync(HOOKS_JSON_PATH, JSON.stringify(hooksConfig, null, 2) + "\n", "utf-8");
   console.log(`  Wrote ${HOOKS_JSON_PATH}`);
@@ -167,11 +132,21 @@ function main() {
     console.log("    npm run install-hooks -- --global\n");
   }
   console.log("  Cursor will run these hooks automatically:");
-  console.log("    beforeSubmitPrompt  → scans prompts via Prisma AIRS");
-  console.log("    afterAgentResponse  → scans AI responses (incl. code extraction)");
-  console.log("    beforeMCPExecution  → scans MCP tool inputs via Prisma AIRS (can block)");
-  console.log("    postToolUse         → scans tool outputs for audit (observe-only)\n");
-  console.log("  Environment variables (set in your shell profile):");
+  const pad = Math.max(...hookDefs.map((d) => d.event.length));
+  for (const def of hookDefs) {
+    const tag = def.optional ? " [optional]" : "";
+    console.log(`    ${def.event.padEnd(pad)} → ${def.description}${tag}`);
+  }
+  const skippedOptional = HOOK_DEFS.filter(
+    (d) => d.optional && !hookDefs.includes(d),
+  );
+  if (skippedOptional.length > 0) {
+    console.log("\n  Optional hooks not installed (enable with --optional <name>|all):");
+    for (const def of skippedOptional) {
+      console.log(`    ${def.event.padEnd(pad)} → ${def.description}`);
+    }
+  }
+  console.log("\n  Environment variables (set in your shell profile):");
   console.log("    PRISMA_AIRS_API_KEY            — x-pan-token for AIRS API (required)");
   console.log("    PRISMA_AIRS_API_ENDPOINT       — regional base URL (optional, defaults to US)");
   console.log("    PRISMA_AIRS_PROMPT_PROFILE     — prompt security profile name (optional)");

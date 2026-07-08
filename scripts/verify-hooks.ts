@@ -3,12 +3,18 @@
  * Tamper detection: verify Cursor hooks.json contains AIRS hook entries
  * and that the AIRS config file is present.
  *
+ * Core hooks missing → failure (exit 1). Optional hooks are reported but
+ * never fail verification — they're only present when installed with
+ * `install-hooks --optional`.
+ *
  * Run: npx tsx scripts/verify-hooks.ts            # project-level (.cursor/)
  *      npx tsx scripts/verify-hooks.ts --global    # user-level (~/.cursor/)
  */
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { cursorDir } from "./lib/paths.js";
+import { HOOK_DEFS, checkRegistered } from "./lib/hook-registry.js";
+import type { CursorHooksConfig } from "../src/types.js";
 
 const isGlobal = process.argv.includes("--global");
 const CURSOR_DIR = cursorDir(isGlobal);
@@ -30,46 +36,19 @@ function main() {
 
     // Verify AIRS entries are present
     try {
-      const config = JSON.parse(readFileSync(HOOKS_JSON, "utf-8"));
-      const hasPromptHook = config.hooks?.beforeSubmitPrompt?.some(
-        (h: { command: string }) => h.command.includes("before-submit-prompt"),
-      );
-      const hasResponseHook = config.hooks?.afterAgentResponse?.some(
-        (h: { command: string }) => h.command.includes("after-agent-response"),
-      );
-      const hasMCPHook = config.hooks?.beforeMCPExecution?.some(
-        (h: { command: string }) => h.command.includes("before-mcp-execution"),
-      );
-      const hasPostToolHook = config.hooks?.postToolUse?.some(
-        (h: { command: string }) => h.command.includes("post-tool-use"),
-      );
+      const config: CursorHooksConfig = JSON.parse(readFileSync(HOOKS_JSON, "utf-8"));
+      const pad = Math.max(...HOOK_DEFS.map((d) => d.event.length));
 
-      if (hasPromptHook) {
-        console.log("  ✅ Registered: beforeSubmitPrompt → AIRS prompt scan");
-      } else {
-        console.log("  ❌ MISSING:    beforeSubmitPrompt hook entry");
-        issues++;
-      }
-
-      if (hasResponseHook) {
-        console.log("  ✅ Registered: afterAgentResponse → AIRS response scan");
-      } else {
-        console.log("  ❌ MISSING:    afterAgentResponse hook entry");
-        issues++;
-      }
-
-      if (hasMCPHook) {
-        console.log("  ✅ Registered: beforeMCPExecution → AIRS MCP tool scan");
-      } else {
-        console.log("  ❌ MISSING:    beforeMCPExecution hook entry");
-        issues++;
-      }
-
-      if (hasPostToolHook) {
-        console.log("  ✅ Registered: postToolUse → AIRS tool output audit");
-      } else {
-        console.log("  ❌ MISSING:    postToolUse hook entry");
-        issues++;
+      for (const def of HOOK_DEFS) {
+        const registered = checkRegistered(config, def);
+        if (registered) {
+          console.log(`  ✅ Registered: ${def.event.padEnd(pad)} → ${def.description}`);
+        } else if (def.optional) {
+          console.log(`  ⚪ Optional:   ${def.event.padEnd(pad)} not installed (enable with --optional)`);
+        } else {
+          console.log(`  ❌ MISSING:    ${def.event} hook entry`);
+          issues++;
+        }
       }
     } catch {
       console.log("  ❌ ERROR:   hooks.json is invalid JSON");

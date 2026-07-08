@@ -20,7 +20,7 @@ const command = args[0];
 const passthrough = args.slice(1).join(" ");
 
 const COMMANDS: Record<string, { script: string; usage: string; help: string }> = {
-  install: { script: "scripts/install-hooks.ts", usage: "install [--global]", help: "Install hooks into Cursor" },
+  install: { script: "scripts/install-hooks.ts", usage: "install [--global] [--optional <names|all>]", help: "Install hooks into Cursor" },
   uninstall: { script: "scripts/uninstall-hooks.ts", usage: "uninstall [--global]", help: "Remove hooks from Cursor" },
   verify: { script: "scripts/verify-hooks.ts", usage: "verify [--global]", help: "Check hooks registration and env vars" },
   "validate-connection": { script: "scripts/validate-connection.ts", usage: "validate-connection", help: "Test AIRS API connectivity" },
