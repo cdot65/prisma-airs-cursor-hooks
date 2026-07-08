@@ -71,6 +71,13 @@ export const HOOK_DEFS: HookDef[] = [
     failClosed: false,
   },
   {
+    event: "afterMCPExecution",
+    slug: "after-mcp-execution",
+    description: "scans MCP tool results for audit (observe-only)",
+    optional: true,
+    failClosed: false,
+  },
+  {
     event: "subagentStart",
     slug: "subagent-start",
     description: "scans subagent task text for injection (can block)",
