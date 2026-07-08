@@ -129,6 +129,21 @@ export interface BeforeMCPExecutionInput extends CursorHookInput {
   tool_input: unknown;
 }
 
+/** stdin for beforeShellExecution hook */
+export interface BeforeShellExecutionInput extends CursorHookInput {
+  command: string;
+  cwd?: string;
+  sandbox?: boolean;
+}
+
+/** stdin for afterShellExecution hook */
+export interface AfterShellExecutionInput extends CursorHookInput {
+  command: string;
+  output: string;
+  duration?: number;
+  sandbox?: boolean;
+}
+
 /** stdin for postToolUse hook */
 export interface PostToolUseInput extends CursorHookInput {
   tool_name: string;

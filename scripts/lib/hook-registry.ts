@@ -49,6 +49,20 @@ export const HOOK_DEFS: HookDef[] = [
     optional: false,
     failClosed: false,
   },
+  {
+    event: "beforeShellExecution",
+    slug: "before-shell-execution",
+    description: "scans shell commands via Prisma AIRS (can block)",
+    optional: true,
+    failClosed: false,
+  },
+  {
+    event: "afterShellExecution",
+    slug: "after-shell-execution",
+    description: "scans shell output for DLP (observe-only)",
+    optional: true,
+    failClosed: false,
+  },
 ];
 
 const DEFAULT_TIMEOUT = 5000;

@@ -36,6 +36,7 @@ const sidebars: SidebarsConfig = {
         'features/circuit-breaker',
         'features/dlp-masking',
         'features/logging',
+        'features/optional-hooks',
       ],
     },
     {
