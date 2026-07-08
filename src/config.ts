@@ -118,6 +118,9 @@ export function loadConfig(configPath?: string): AirsConfig {
     throw new Error("timeout_ms must be a positive number");
   }
 
+  // MCP output sanitization is opt-in
+  config.sanitize_mcp_output = config.sanitize_mcp_output === true;
+
   // Apply content limits defaults
   config.content_limits = {
     ...DEFAULT_CONTENT_LIMITS,

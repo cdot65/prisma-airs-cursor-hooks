@@ -63,6 +63,12 @@ export interface AirsConfig {
   circuit_breaker?: CircuitBreakerConfig;
   /** Content size limits for scanning */
   content_limits?: ContentLimitsConfig;
+  /**
+   * When true (and mode is enforce), postToolUse replaces flagged MCP tool
+   * output with a redaction notice via Cursor's updated_mcp_tool_output.
+   * Default false — postToolUse stays purely observational.
+   */
+  sanitize_mcp_output?: boolean;
 }
 
 /** Scan direction */

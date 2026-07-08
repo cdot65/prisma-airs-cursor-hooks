@@ -116,3 +116,17 @@ See [Circuit Breaker](../features/circuit-breaker).
 | `truncate_bytes` | `number` | `20480` (20KB) | Inputs above this threshold are truncated before scanning |
 
 Applies to all scan paths including `beforeSubmitPrompt`, `beforeMCPExecution`, `postToolUse`, and `afterAgentResponse`. Prevents excessive latency and API errors for large tool outputs, Bash results, or multi-file reads.
+
+### `sanitize_mcp_output`
+
+```json
+{
+  "sanitize_mcp_output": true
+}
+```
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `sanitize_mcp_output` | `boolean` | `false` | In `enforce` mode, replace flagged MCP tool output with a redaction notice via Cursor's `updated_mcp_tool_output` so the flagged content never reaches the model. Non-MCP tools are unaffected (Cursor only supports output replacement for MCP tools). |
+
+See [Optional Hooks → MCP output sanitization](../features/optional-hooks#mcp-output-sanitization-posttooluse).

@@ -74,7 +74,7 @@ AI response → afterAgentResponse hook → code extractor → AIRS Sync API (re
 
 - **beforeSubmitPrompt** (can block): stdin `{ prompt, user_email }` → stdout `{ continue: true/false, user_message? }`
 - **beforeMCPExecution** (can block): stdin `{ tool_name, tool_input, ... }` → stdout `{ continue: true/false, user_message? }`
-- **postToolUse** (observe-only): stdin `{ tool_name, tool_input, tool_output, ... }` → stdout ignored by Cursor. Scans tool output and logs violations.
+- **postToolUse** (observe + optional MCP sanitization): stdin `{ tool_name, tool_input, tool_output, ... }` → stdout `{}` normally; for MCP tools Cursor honors `{ updated_mcp_tool_output, additional_context }` — with `sanitize_mcp_output: true` in enforce mode, flagged MCP output is replaced with a redaction notice before reaching the model. Non-MCP tools remain observe-only.
 - **afterAgentResponse** (observe-only): stdin `{ text }` → stdout ignored by Cursor. Scans and logs violations but **cannot block or hide** the response — Cursor displays it before the hook fires. Violations are surfaced as warnings in the Hooks output panel.
 
 ### Core Modules
