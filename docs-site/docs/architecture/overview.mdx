@@ -24,6 +24,11 @@ flowchart TB
         G --> F[afterAgentResponse]
         F -->|violation| H[Log + Warn]
         F -->|clean| I2[No Action]
+        C -.-> S1[Shell Command]
+        S1 -.-> S2[beforeShellExecution*]
+        S2 -.->|allow| S3[Execute] -.-> S4[afterShellExecution*]
+        C -.-> R1[File Read] -.-> R2[beforeReadFile* / beforeTabFileRead*]
+        C -.-> G1[Subagent Task] -.-> G2[subagentStart*]
     end
 
     subgraph AIRS Hooks
@@ -40,6 +45,8 @@ flowchart TB
         N --> J
     end
 ```
+
+*Dashed nodes are [optional hooks](../features/optional-hooks), installed with `install --optional`.*
 
 :::warning[Cursor limitation]
 `postToolUse` and `afterAgentResponse` are **observe-only**. Cursor processes tool outputs and displays AI responses before these hooks fire — violations are logged and warnings emitted, but content cannot be blocked or retracted. See [Cursor Limitation](../reference/cursor-hooks-api#cursor-limitation-no-response-blocking) for details.
@@ -62,8 +69,15 @@ flowchart TB
 | `src/types.ts` | TypeScript interfaces for config, Cursor API, AIRS |
 | `src/hooks/before-submit-prompt.ts` | Cursor `beforeSubmitPrompt` entry point (can block) |
 | `src/hooks/before-mcp-execution.ts` | Cursor `beforeMCPExecution` entry point (can block) |
-| `src/hooks/post-tool-use.ts` | Cursor `postToolUse` entry point (observe-only) |
+| `src/hooks/post-tool-use.ts` | Cursor `postToolUse` entry point (observe-only; optional MCP output sanitization) |
 | `src/hooks/after-agent-response.ts` | Cursor `afterAgentResponse` entry point (observe-only) |
+| `src/hooks/before-shell-execution.ts` | Cursor `beforeShellExecution` entry point (optional, can block) |
+| `src/hooks/after-shell-execution.ts` | Cursor `afterShellExecution` entry point (optional, observe-only) |
+| `src/hooks/before-read-file.ts` | Cursor `beforeReadFile` entry point (optional, can block) |
+| `src/hooks/before-tab-file-read.ts` | Cursor `beforeTabFileRead` entry point (optional, can block) |
+| `src/hooks/subagent-start.ts` | Cursor `subagentStart` entry point (optional, can block) |
+| `src/hooks/after-mcp-execution.ts` | Cursor `afterMCPExecution` entry point (optional, observe-only) |
+| `scripts/lib/hook-registry.ts` | Registry of core + optional hooks driving install/uninstall/verify/doctor |
 
 ## Request Lifecycle
 
@@ -118,3 +132,14 @@ flowchart TB
 | Development | `npx tsx src/hooks/*.ts` | JIT TypeScript | ~2.5s |
 
 The `install-hooks` script points at compiled JS by default. See [Contributing](../development/contributing) for the development workflow.
+
+### Optional Hook Scans
+
+The [optional hooks](../features/optional-hooks) reuse the same lifecycle with different content routing:
+
+- `beforeShellExecution` → command text as `tool_event` (`profiles.tool`), deny + exit 2 on enforce-mode block
+- `afterShellExecution` → terminal output as `response` (`profiles.response`), observe-only
+- `beforeReadFile` / `beforeTabFileRead` → file contents as `prompt` (`profiles.prompt`, DLP), deny on enforce-mode block
+- `subagentStart` → task text as `prompt`, deny on enforce-mode block
+- `afterMCPExecution` → tool input + result JSON as `tool_event`, observe-only
+- `postToolUse` with `sanitize_mcp_output: true` → flagged MCP output replaced via `updated_mcp_tool_output`

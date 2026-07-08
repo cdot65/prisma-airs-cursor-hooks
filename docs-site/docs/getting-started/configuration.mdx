@@ -45,16 +45,19 @@ Runtime configuration lives at `.cursor/hooks/airs-config.json` (project-level) 
     "enabled": true,
     "failure_threshold": 5,
     "cooldown_ms": 60000
-  }
+  },
+  "sanitize_mcp_output": false
 }
 ```
+
+`sanitize_mcp_output` (default `false`): in `enforce` mode, `postToolUse` replaces flagged MCP tool output with a redaction notice before it reaches the model. See [Optional Hooks](../features/optional-hooks#mcp-output-sanitization-posttooluse).
 
 ## Modes
 
 | Mode | Behavior |
 |------|----------|
 | `observe` | Log scan results, never block. Start here to audit before enforcing. |
-| `enforce` | Block prompts/responses that AIRS flags, based on enforcement actions. |
+| `enforce` | Block flagged prompts, MCP calls, and (if installed) optional-hook actions — shell commands, file reads, subagent spawns — based on enforcement actions. |
 | `bypass` | Skip scanning entirely. Useful for debugging. |
 
 ## Enforcement Actions
