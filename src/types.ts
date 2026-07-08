@@ -169,6 +169,14 @@ export interface SubagentStartInput extends CursorHookInput {
   git_branch?: string;
 }
 
+/** stdin for afterMCPExecution hook */
+export interface AfterMCPExecutionInput extends CursorHookInput {
+  tool_name: string;
+  tool_input: unknown;
+  result_json: unknown;
+  duration?: number;
+}
+
 /** stdin for postToolUse hook */
 export interface PostToolUseInput extends CursorHookInput {
   tool_name: string;

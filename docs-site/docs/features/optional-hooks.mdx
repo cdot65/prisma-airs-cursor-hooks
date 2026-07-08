@@ -27,6 +27,7 @@ prisma-airs-hooks install --global --optional beforeShellExecution,afterShellExe
 | `beforeReadFile` | **Yes** | File contents before the Agent reads them | `prompt` (prompt profile, DLP) |
 | `beforeTabFileRead` | **Yes** | File contents before Tab completions read them | `prompt` (prompt profile, DLP) |
 | `subagentStart` | **Yes** | Subagent task text before the subagent spawns | `prompt` (prompt profile) |
+| `afterMCPExecution` | No (observe) | MCP tool input + full result JSON after execution | `tool_event` (tool profile) |
 
 ## Shell command scanning (beforeShellExecution)
 
@@ -58,6 +59,14 @@ Files larger than `content_limits.max_scan_bytes` (default 50 KB) skip scanning 
 ## Subagent task scanning (subagentStart)
 
 Fires before a subagent (Task tool) spawns. The task description can carry prompt injection — text a compromised context planted for a fresh agent with fewer guardrails. The task is scanned like a prompt; in `enforce` mode a block verdict denies the spawn with a `user_message` naming the subagent type and scan ID. Cursor treats `"ask"` as deny for this hook, so the hook only ever emits `allow` or `deny`.
+
+## MCP result auditing (afterMCPExecution)
+
+Fires after an MCP tool executes, receiving the tool input and the **full result JSON** directly from Cursor. Both are scanned together as a `tool_event`. Observe-only — the tool already ran; violations are logged and warned.
+
+:::note Double scanning
+The core `postToolUse` hook also scans MCP tool results. If both are installed, MCP results are scanned twice — pick one surface for MCP auditing.
+:::
 
 :::warning Latency
 Each scan adds ~800 ms. Tab completions read files frequently — enable `beforeTabFileRead` only when DLP requirements justify the latency. This is why both hooks ship as opt-in.
