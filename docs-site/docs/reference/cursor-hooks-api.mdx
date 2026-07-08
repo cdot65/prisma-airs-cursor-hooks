@@ -198,16 +198,16 @@ Cursor ignores stdout and exit codes for this hook. We emit JSON for logging con
 
 Cursor has no `beforeAgentResponse` or equivalent hook. The AI response streams directly to the user, and `afterAgentResponse` fires only after it is already visible.
 
-The hooks that **can** block all cover actions, not response text:
+The hooks that **can** block all cover actions, not response text. This project implements all of them — see [Optional Hooks](../features/optional-hooks):
 
-| Hook | What it gates |
-|------|---------------|
-| `beforeSubmitPrompt` | User prompt → AI |
-| `preToolUse` | Agent deciding to call a tool |
-| `beforeShellExecution` | Shell commands |
-| `beforeMCPExecution` | MCP tool calls |
-| `beforeReadFile` | File reads |
-| `subagentStart` | Sub-agent spawning |
+| Hook | What it gates | In this project |
+|------|---------------|-----------------|
+| `beforeSubmitPrompt` | User prompt → AI | Core |
+| `beforeMCPExecution` | MCP tool calls | Core |
+| `beforeShellExecution` | Shell commands | Optional |
+| `beforeReadFile` | File reads | Optional |
+| `beforeTabFileRead` | Tab file reads | Optional |
+| `subagentStart` | Sub-agent spawning | Optional |
 
 None of these intercept the AI's natural language or code response before display. This is a gap in Cursor's hook API — there is no point in the pipeline where external code can scan the generated text and block it before the user sees it.
 

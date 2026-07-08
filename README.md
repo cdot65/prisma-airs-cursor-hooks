@@ -1,6 +1,6 @@
 # Prisma AIRS Cursor Hooks
 
-Cursor IDE hooks that scan prompts and AI responses in real-time using [Prisma AI Runtime Security (AIRS)](https://www.paloaltonetworks.com/prisma/ai-runtime-security). Blocks prompts before they reach the AI agent and audits responses for security violations, scanning for prompt injections, malicious code, sensitive data leakage, and policy violations.
+Cursor IDE hooks that scan prompts, tool activity, file reads, and AI responses in real-time using [Prisma AI Runtime Security (AIRS)](https://www.paloaltonetworks.com/prisma/ai-runtime-security). Blocks prompts, shell commands, MCP tool calls, file reads, and subagent spawns before they execute; audits everything else for prompt injections, malicious code, sensitive data leakage, and policy violations. Four core hooks install by default; six more are available opt-in.
 
 Built on the [`@cdot65/prisma-airs-sdk`](https://github.com/cdot65/prisma-airs-sdk).
 
@@ -18,7 +18,7 @@ Developer prompt → beforeSubmitPrompt hook → AIRS Sync API → allow/block
 AI response → afterAgentResponse hook → code extractor → AIRS Sync API → log/warn (observe-only)
 ```
 
-All hooks use Cursor's native hooks.json system. They receive structured JSON on stdin and scan via the AIRS API. `beforeSubmitPrompt` and `beforeMCPExecution` **can block** (`{ "continue": false }`). `postToolUse` and `afterAgentResponse` are **observe-only** — they scan and log violations but cannot block or hide content (see [Cursor Limitation](#cursor-limitation-response-scanning-is-observe-only)).
+All hooks use Cursor's native hooks.json system. They receive structured JSON on stdin and scan via the AIRS API. Blocking hooks: `beforeSubmitPrompt`, `beforeMCPExecution`, plus optional `beforeShellExecution`, `beforeReadFile`, `beforeTabFileRead`, and `subagentStart`. Observe-only: `postToolUse` (unless [MCP output sanitization](#optional-hooks) is enabled), `afterAgentResponse`, and optional `afterShellExecution` / `afterMCPExecution` (see [Cursor Limitation](#cursor-limitation-response-scanning-is-observe-only)).
 
 ## Prerequisites
 
@@ -75,6 +75,27 @@ This writes `hooks.json` registering four hooks pointing at precompiled JS:
 - **`afterAgentResponse`** — scans every AI response (with code extraction) for audit/logging (**observe-only**, see [limitation](#cursor-limitation-response-scanning-is-observe-only))
 
 It also copies `airs-config.json` to the hooks config directory.
+
+### Optional Hooks
+
+Six additional hooks ship opt-in via `--optional <names|all>`:
+
+```bash
+prisma-airs-hooks install --global --optional all
+# or a subset:
+prisma-airs-hooks install --global --optional beforeShellExecution,beforeReadFile
+```
+
+| Hook | Blocks? | Scans |
+|------|---------|-------|
+| `beforeShellExecution` | **Yes** | Shell command text before execution |
+| `afterShellExecution` | No | Terminal output (DLP) after execution |
+| `beforeReadFile` | **Yes** | File contents before the Agent reads them (DLP gate) |
+| `beforeTabFileRead` | **Yes** | File contents before Tab completions read them |
+| `subagentStart` | **Yes** | Subagent task text (injection) before spawn |
+| `afterMCPExecution` | No | MCP tool input + result JSON after execution |
+
+There is also a config flag, `sanitize_mcp_output` (default `false`): in enforce mode, `postToolUse` replaces flagged MCP tool output with a redaction notice via Cursor's `updated_mcp_tool_output`, keeping flagged content out of model context. See the [Optional Hooks docs](https://cdot65.github.io/prisma-airs-cursor-hooks/features/optional-hooks) for details.
 
 ## Restart Cursor
 
@@ -179,16 +200,16 @@ Removes AIRS entries from `hooks.json` while preserving other hooks, config, and
 
 Cursor's `afterAgentResponse` hook is **observe-only**. The AI response streams directly to the user, and the hook fires after it is already visible. There is no `beforeAgentResponse` or equivalent hook that can intercept the response before display.
 
-The blocking hooks that exist all cover **actions**, not the response text itself:
+The blocking hooks that exist all cover **actions**, not the response text itself. This project implements every one of them (some as [optional hooks](#optional-hooks)):
 
-| Hook | What it gates |
-|------|---------------|
-| `beforeSubmitPrompt` | User prompt → AI |
-| `preToolUse` | Agent deciding to call a tool |
-| `beforeShellExecution` | Shell commands |
-| `beforeMCPExecution` | MCP tool calls |
-| `beforeReadFile` | File reads |
-| `subagentStart` | Sub-agent spawning |
+| Hook | What it gates | In this project |
+|------|---------------|-----------------|
+| `beforeSubmitPrompt` | User prompt → AI | Core |
+| `beforeMCPExecution` | MCP tool calls | Core |
+| `beforeShellExecution` | Shell commands | Optional |
+| `beforeReadFile` | File reads | Optional |
+| `beforeTabFileRead` | Tab file reads | Optional |
+| `subagentStart` | Sub-agent spawning | Optional |
 
 None of these intercept the AI's natural language or code response before display. This is a gap in Cursor's hook API.
 
@@ -252,10 +273,16 @@ This adds ~1.5s per hook invocation compared to compiled JS, so switch back to `
 src/                           TypeScript source
   hooks/
     run-hook.ts                Shared hook harness (stdin/parse/config/fail-open)
-    before-submit-prompt.ts    Cursor beforeSubmitPrompt entry point
-    before-mcp-execution.ts    Cursor beforeMCPExecution entry point
-    post-tool-use.ts           Cursor postToolUse entry point
-    after-agent-response.ts    Cursor afterAgentResponse entry point
+    before-submit-prompt.ts    Cursor beforeSubmitPrompt entry point (core)
+    before-mcp-execution.ts    Cursor beforeMCPExecution entry point (core)
+    post-tool-use.ts           Cursor postToolUse entry point (core, optional MCP sanitization)
+    after-agent-response.ts    Cursor afterAgentResponse entry point (core)
+    before-shell-execution.ts  Cursor beforeShellExecution entry point (optional)
+    after-shell-execution.ts   Cursor afterShellExecution entry point (optional)
+    before-read-file.ts        Cursor beforeReadFile entry point (optional)
+    before-tab-file-read.ts    Cursor beforeTabFileRead entry point (optional)
+    subagent-start.ts          Cursor subagentStart entry point (optional)
+    after-mcp-execution.ts     Cursor afterMCPExecution entry point (optional)
   cli.ts                       CLI entry point (prisma-airs-hooks command)
   config.ts                    Config loader (project → global fallback)
   airs-client.ts               executeScan seam: SDK transport + circuit breaker
@@ -269,14 +296,15 @@ src/                           TypeScript source
   types.ts                     TypeScript interfaces
 dist/                          Compiled JS (production hooks point here)
 scripts/
-  install-hooks.ts             Write .cursor/hooks.json (points at dist/)
+  lib/hook-registry.ts         Registry of all hooks (core + optional) driving the scripts below
+  install-hooks.ts             Write .cursor/hooks.json (points at dist/, --optional for extras)
   uninstall-hooks.ts           Remove AIRS entries from hooks.json
   verify-hooks.ts              Tamper detection
   validate-connection.ts       Test AIRS connectivity
   validate-detection.ts        Verify detection works
   airs-stats.ts                Scan statistics CLI
 test/
-  9 test suites, 66 tests (incl. compiled JS integration tests)
+  19 test suites, 184 tests (incl. compiled JS integration tests against a mock AIRS server)
 ```
 
 ## License
