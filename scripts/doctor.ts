@@ -17,6 +17,8 @@ import { dirname, join } from "node:path";
 import { homedir } from "node:os";
 import { resolveConfigPath, loadConfig } from "../src/config.js";
 import { globalConfigPath } from "./lib/paths.js";
+import { HOOK_DEFS, checkRegistered } from "./lib/hook-registry.js";
+import type { CursorHooksConfig } from "../src/types.js";
 
 const VALID_MODES = ["observe", "enforce", "bypass"];
 
@@ -117,21 +119,51 @@ function main() {
   }
 
   // --- Hook registration + build ---
-  const hooksJson = join(homedir(), ".cursor", "hooks.json");
-  if (existsSync(hooksJson)) {
-    const raw = readFileSync(hooksJson, "utf-8");
-    if (raw.includes("before-submit-prompt")) {
-      ok(`Hooks registered in ${hooksJson}`);
-      const m = raw.match(/"node \\?"?([^"\\]+dist)/);
-      const distDir = m?.[1];
-      if (distDir && !existsSync(join(distDir, "hooks", "before-submit-prompt.js"))) {
-        advise(`Hooks point at ${distDir} but compiled files are missing — run: npm run build`);
-      }
-    } else {
-      advise("hooks.json exists but has no AIRS entries — run: prisma-airs-hooks install --global");
-    }
+  // Cursor merges project (.cursor/hooks.json) and user (~/.cursor/hooks.json)
+  // scopes; a hook registered in either is active.
+  const scopes = [
+    { label: "project", path: join(process.cwd(), ".cursor", "hooks.json") },
+    { label: "global", path: join(homedir(), ".cursor", "hooks.json") },
+  ].filter((s) => existsSync(s.path));
+
+  if (scopes.length === 0) {
+    advise("No .cursor/hooks.json or ~/.cursor/hooks.json — run: prisma-airs-hooks install --global");
   } else {
-    advise("No ~/.cursor/hooks.json — run: prisma-airs-hooks install --global");
+    const configs: { label: string; config: CursorHooksConfig }[] = [];
+    for (const scope of scopes) {
+      try {
+        configs.push({
+          label: scope.label,
+          config: JSON.parse(readFileSync(scope.path, "utf-8")),
+        });
+      } catch {
+        advise(`${scope.path} is invalid JSON — fix or reinstall: prisma-airs-hooks install`);
+      }
+    }
+
+    const missingDist: string[] = [];
+    for (const def of HOOK_DEFS) {
+      const registeredIn = configs.filter((c) => checkRegistered(c.config, def));
+      if (registeredIn.length > 0) {
+        ok(`Registered (${registeredIn.map((c) => c.label).join(", ")}): ${def.event}`);
+        // Verify every registered command points at an existing compiled file
+        for (const { config } of registeredIn) {
+          for (const entry of config.hooks[def.event] ?? []) {
+            const m = entry.command.match(/^node "(.+\.js)"$/);
+            if (m && m[1].includes(def.slug) && !existsSync(m[1])) {
+              missingDist.push(m[1]);
+            }
+          }
+        }
+      } else if (def.optional) {
+        console.log(`  ⚪ Optional:   ${def.event} not installed (enable with install --optional)`);
+      } else {
+        advise(`Core hook ${def.event} not registered — run: prisma-airs-hooks install --global`);
+      }
+    }
+    if (missingDist.length > 0) {
+      advise(`Compiled hook file(s) missing: ${[...new Set(missingDist)].join(", ")} — run: npm run build`);
+    }
   }
 
   // --- Summary ---

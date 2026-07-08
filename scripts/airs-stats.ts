@@ -54,6 +54,7 @@ function main() {
   const scans = entries.filter((e) => e.event === "scan_complete");
   const prompts = scans.filter((e) => e.direction === "prompt");
   const responses = scans.filter((e) => e.direction === "response");
+  const tools = scans.filter((e) => e.direction === "tool");
 
   const allowed = scans.filter((e) => e.action_taken === "allowed" || e.action_taken === "observed").length;
   const blocked = scans.filter((e) => e.action_taken === "blocked").length;
@@ -73,6 +74,7 @@ function main() {
     total: scans.length,
     prompts: prompts.length,
     responses: responses.length,
+    tools: tools.length,
     allowed,
     blocked,
     observed,
@@ -97,6 +99,7 @@ function main() {
   console.log(`Total scans:        ${stats.total}`);
   console.log(`Prompts scanned:    ${stats.prompts}`);
   console.log(`Responses scanned:  ${stats.responses}`);
+  console.log(`Tool events scanned: ${stats.tools}`);
   console.log(`Verdicts:`);
   console.log(`  Allowed:          ${stats.allowed} (${pct(stats.allowed)}%)`);
   console.log(`  Blocked:          ${stats.blocked} (${pct(stats.blocked)}%)`);
