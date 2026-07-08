@@ -4,8 +4,7 @@
  * Run: npx tsx scripts/airs-logs.ts [--n 10] [--json]
  */
 import { readFileSync, existsSync } from "node:fs";
-import { loadConfig } from "../src/config.js";
-import { defaultLogPath } from "./lib/paths.js";
+import { resolveLogPath } from "./lib/paths.js";
 
 interface LogEntry {
   timestamp?: string;
@@ -18,14 +17,6 @@ interface LogEntry {
   scan_id?: string;
   error?: string | null;
   [key: string]: unknown;
-}
-
-function resolveLogPath(): string {
-  try {
-    return loadConfig().logging.path;
-  } catch {
-    return defaultLogPath();
-  }
 }
 
 function formatEntry(e: LogEntry): string {
